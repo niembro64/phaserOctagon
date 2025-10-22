@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Collision Detection Comparison: Naive vs Raycast</title>
   <style>
     body {
@@ -36,13 +36,12 @@
       gap: 10px;
       width: 300px;
     }
-    .slider-container label {
-      width: 120px;
-    }
+    .slider-container label { width: 120px; }
     .shape-selector {
       display: flex;
       gap: 10px;
       margin-bottom: 5px;
+      align-items: center;
     }
     .shape-selector label {
       display: flex;
@@ -58,9 +57,7 @@
       border: none;
       border-radius: 4px;
     }
-    button:hover {
-      background-color: #45a049;
-    }
+    button:hover { background-color: #45a049; }
   </style>
 </head>
 <body>
@@ -68,24 +65,14 @@
   <div class="controls">
     <div class="shape-selector">
       <strong>Collision Mode:</strong>
-      <label>
-        <input type="radio" name="collisionMode" value="naive" checked /> Naive
-      </label>
-      <label>
-        <input type="radio" name="collisionMode" value="raycast" /> Raycast
-      </label>
+      <label><input type="radio" name="collisionMode" value="naive" checked /> Naive</label>
+      <label><input type="radio" name="collisionMode" value="raycast" /> Raycast</label>
     </div>
     <div class="shape-selector">
       <strong>Shape:</strong>
-      <label>
-        <input type="radio" name="shape" value="3" checked /> Triangle
-      </label>
-      <label>
-        <input type="radio" name="shape" value="4" /> Square
-      </label>
-      <label>
-        <input type="radio" name="shape" value="6" /> Hexagon
-      </label>
+      <label><input type="radio" name="shape" value="3" checked /> Triangle</label>
+      <label><input type="radio" name="shape" value="4" /> Square</label>
+      <label><input type="radio" name="shape" value="6" /> Hexagon</label>
     </div>
     <div class="slider-container">
       <label for="gravity">Gravity:</label>
@@ -111,13 +98,10 @@
   </div>
 
   <script>
-    // Get the canvas and context
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
-    const centerX = width / 2;
-    const centerY = height / 2;
+    const width = canvas.width, height = canvas.height;
+    const centerX = width / 2, centerY = height / 2;
 
     // Controls
     const gravitySlider = document.getElementById('gravity');
@@ -132,7 +116,6 @@
     const shapeRadios = document.querySelectorAll('input[name="shape"]');
     const collisionModeRadios = document.querySelectorAll('input[name="collisionMode"]');
 
-    // Helper function to format numbers with leading zero, two decimal places, and sign
     function formatNumber(value) {
       const num = parseFloat(value).toFixed(2);
       return num >= 0 ? '+' + num : num;
@@ -145,117 +128,90 @@
     let ballElasticity = parseFloat(elasticitySlider.value);
 
     // Collision mode
-    let collisionMode = 'naive'; // 'naive' or 'raycast'
+    let collisionMode = 'naive'; // 'naive' or 'raycast' (raycast = rays shown + robust half-space resolution)
 
     // Shape parameters
-    let shapeSides = 3; // Default to triangle
+    let shapeSides = 3;
     const shapeRadius = 220;
     let shapeAngle = 0;
 
-    // Ball parameters
+    // Balls
     const BALL_RADIUS = 15;
     const NUM_BALLS = 5;
     let balls = [];
 
-    // Initialize balls
-    function initializeBalls() {
-      balls = [];
-      for (let i = 0; i < NUM_BALLS; i++) {
-        balls.push(resetBall());
-      }
-    }
-
-    initializeBalls();
-    
-    // Update value displays with proper formatting
-    gravityValue.textContent = formatNumber(gravity);
-    frictionValue.textContent = formatNumber(friction);
-    rotationValue.textContent = formatNumber(rotationSpeed);
-    elasticityValue.textContent = formatNumber(ballElasticity);
-
-    // Event listeners for controls
-    gravitySlider.addEventListener('input', () => {
-      gravity = parseFloat(gravitySlider.value);
-      gravityValue.textContent = formatNumber(gravity);
-    });
-
-    frictionSlider.addEventListener('input', () => {
-      friction = parseFloat(frictionSlider.value);
-      frictionValue.textContent = formatNumber(friction);
-    });
-
-    rotationSlider.addEventListener('input', () => {
-      rotationSpeed = parseFloat(rotationSlider.value);
-      rotationValue.textContent = formatNumber(rotationSpeed);
-    });
-
-    elasticitySlider.addEventListener('input', () => {
-      ballElasticity = parseFloat(elasticitySlider.value);
-      elasticityValue.textContent = formatNumber(ballElasticity);
-    });
-
-    resetButton.addEventListener('click', () => {
-      initializeBalls();
-    });
-
-    // Event listener for shape selection
-    shapeRadios.forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        shapeSides = parseInt(e.target.value);
-        initializeBalls(); // Reset balls when shape changes
-      });
-    });
-
-    // Event listener for collision mode selection
-    collisionModeRadios.forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        collisionMode = e.target.value;
-      });
-    });
-
-    // Function to reset a single ball with random position
     function resetBall() {
       const angle = Math.random() * Math.PI * 2;
       const distance = Math.random() * 80;
       return {
         x: centerX + Math.cos(angle) * distance,
         y: centerY + Math.sin(angle) * distance,
-        vx: (Math.random() - 0.5) * 4, // Random initial velocity
+        vx: (Math.random() - 0.5) * 4,
         vy: (Math.random() - 0.5) * 4,
         radius: BALL_RADIUS,
         color: `rgb(${Math.floor(Math.random() * 200 + 55)}, ${Math.floor(Math.random() * 200 + 55)}, ${Math.floor(Math.random() * 200 + 55)})`
       };
     }
 
-    // Function to get shape vertices (works for triangle, square, hexagon, etc.)
+    function initializeBalls() {
+      balls = [];
+      for (let i = 0; i < NUM_BALLS; i++) balls.push(resetBall());
+    }
+    initializeBalls();
+
+    gravityValue.textContent = formatNumber(gravity);
+    frictionValue.textContent = formatNumber(friction);
+    rotationValue.textContent = formatNumber(rotationSpeed);
+    elasticityValue.textContent = formatNumber(ballElasticity);
+
+    gravitySlider.addEventListener('input', () => {
+      gravity = parseFloat(gravitySlider.value);
+      gravityValue.textContent = formatNumber(gravity);
+    });
+    frictionSlider.addEventListener('input', () => {
+      friction = parseFloat(frictionSlider.value);
+      frictionValue.textContent = formatNumber(friction);
+    });
+    rotationSlider.addEventListener('input', () => {
+      rotationSpeed = parseFloat(rotationSlider.value);
+      rotationValue.textContent = formatNumber(rotationSpeed);
+    });
+    elasticitySlider.addEventListener('input', () => {
+      ballElasticity = parseFloat(elasticitySlider.value);
+      elasticityValue.textContent = formatNumber(ballElasticity);
+    });
+    resetButton.addEventListener('click', () => { initializeBalls(); });
+    shapeRadios.forEach(r => r.addEventListener('change', e => {
+      shapeSides = parseInt(e.target.value, 10);
+      initializeBalls();
+    }));
+    collisionModeRadios.forEach(r => r.addEventListener('change', e => {
+      collisionMode = e.target.value;
+    }));
+
     function getShapeVertices() {
       const vertices = [];
       for (let i = 0; i < shapeSides; i++) {
-        // Adjust starting angle based on shape to keep it upright
         const angleOffset = shapeSides === 4 ? Math.PI / 4 : 0;
-        const angle = shapeAngle + angleOffset + (i * 2 * Math.PI / shapeSides);
+        const a = shapeAngle + angleOffset + (i * 2 * Math.PI / shapeSides);
         vertices.push({
-          x: centerX + shapeRadius * Math.cos(angle),
-          y: centerY + shapeRadius * Math.sin(angle)
+          x: centerX + shapeRadius * Math.cos(a),
+          y: centerY + shapeRadius * Math.sin(a)
         });
       }
       return vertices;
     }
 
-    // Function to draw the shape
     function drawShape(vertices) {
       ctx.beginPath();
       ctx.moveTo(vertices[0].x, vertices[0].y);
-      for (let i = 1; i < vertices.length; i++) {
-        ctx.lineTo(vertices[i].x, vertices[i].y);
-      }
+      for (let i = 1; i < vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
       ctx.closePath();
       ctx.strokeStyle = '#333';
       ctx.lineWidth = 3;
       ctx.stroke();
     }
 
-    // Function to draw a ball
     function drawBall(ball) {
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
@@ -266,353 +222,210 @@
       ctx.stroke();
     }
 
-    // Function to check collision with a line segment
+    // ===== Naive edge overlap check (kept for comparison) =====
     function checkCollision(ball, p1, p2) {
-      // Vector from p1 to p2
-      const segmentX = p2.x - p1.x;
-      const segmentY = p2.y - p1.y;
-      const segmentLength = Math.sqrt(segmentX * segmentX + segmentY * segmentY);
+      const segX = p2.x - p1.x, segY = p2.y - p1.y;
+      const segLen = Math.hypot(segX, segY);
 
-      // Unit normal vector to the line segment (pointing inward)
-      const nx = segmentY / segmentLength;
-      const ny = -segmentX / segmentLength;
+      const vx = ball.x - p1.x, vy = ball.y - p1.y;
+      const proj = (vx * segX + vy * segY) / segLen;
 
-      // Vector from p1 to ball
-      const vectorX = ball.x - p1.x;
-      const vectorY = ball.y - p1.y;
+      let cx, cy;
+      if (proj <= 0) { cx = p1.x; cy = p1.y; }
+      else if (proj >= segLen) { cx = p2.x; cy = p2.y; }
+      else { cx = p1.x + (proj * segX) / segLen; cy = p1.y + (proj * segY) / segLen; }
 
-      // Project the vector from p1 to ball onto the segment
-      const projection = (vectorX * segmentX + vectorY * segmentY) / segmentLength;
+      const dx = ball.x - cx, dy = ball.y - cy;
+      const dist = Math.hypot(dx, dy);
 
-      // Find the closest point on the segment to the ball
-      let closestX, closestY;
+      if (dist < ball.radius) {
+        const overlap = ball.radius - dist;
+        const ndx = dx / dist, ndy = dy / dist;
 
-      if (projection <= 0) {
-        closestX = p1.x;
-        closestY = p1.y;
-      } else if (projection >= segmentLength) {
-        closestX = p2.x;
-        closestY = p2.y;
-      } else {
-        closestX = p1.x + (projection * segmentX) / segmentLength;
-        closestY = p1.y + (projection * segmentY) / segmentLength;
-      }
+        ball.x += overlap * ndx;
+        ball.y += overlap * ndy;
 
-      // Calculate distance from ball to closest point
-      const distanceX = ball.x - closestX;
-      const distanceY = ball.y - closestY;
-      const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-
-      // Check if there's a collision
-      if (distance < ball.radius) {
-        // Calculate overlap
-        const overlap = ball.radius - distance;
-
-        // Calculate normal direction
-        const normalX = distanceX / distance;
-        const normalY = distanceY / distance;
-
-        // Move the ball out of the wall
-        ball.x += overlap * normalX;
-        ball.y += overlap * normalY;
-
-        // Calculate the normal and tangential components of velocity
-        const normalVelocity = ball.vx * normalX + ball.vy * normalY;
-
-        // Only bounce if the ball is moving toward the wall
-        if (normalVelocity < 0) {
-          // Apply bounce effect with elasticity
-          const newNormalVelocity = -normalVelocity * ballElasticity;
-
-          // Update velocity
-          ball.vx += (newNormalVelocity - normalVelocity) * normalX;
-          ball.vy += (newNormalVelocity - normalVelocity) * normalY;
+        const vn = ball.vx * ndx + ball.vy * ndy;
+        if (vn < 0) {
+          const newVn = -vn * ballElasticity;
+          ball.vx += (newVn - vn) * ndx;
+          ball.vy += (newVn - vn) * ndy;
         }
-
         return true;
       }
-
       return false;
     }
 
-    // ===== RAYCAST COLLISION DETECTION FUNCTIONS =====
+    // ===== Robust circle vs convex polygon resolution (half-spaces) =====
+    function polygonCentroid(vertices) {
+      let cx = 0, cy = 0;
+      for (const v of vertices) { cx += v.x; cy += v.y; }
+      const n = vertices.length;
+      return { x: cx / n, y: cy / n };
+    }
 
-    // Point-in-polygon test using ray casting
-    // Cast a horizontal ray from the point to the RIGHT (to infinity) and count edge intersections
-    // Odd count = inside, Even count = outside
-    // Returns object with: { isInside: boolean, intersections: array of points }
+    function inwardNormal(p1, p2, centroid) {
+      const ex = p2.x - p1.x, ey = p2.y - p1.y;
+      let nx = -ey, ny = ex; // left normal
+      const mx = (p1.x + p2.x) * 0.5, my = (p1.y + p2.y) * 0.5;
+      const tcx = centroid.x - mx, tcy = centroid.y - my;
+      if (nx * tcx + ny * tcy < 0) { nx = -nx; ny = -ny; }
+      const len = Math.hypot(nx, ny);
+      return { x: nx / len, y: ny / len };
+    }
+
+    function resolveCirclePolygon(ball, vertices, centroid) {
+      const R = ball.radius;
+      for (let i = 0; i < vertices.length; i++) {
+        const p1 = vertices[i];
+        const p2 = vertices[(i + 1) % vertices.length];
+        const n = inwardNormal(p1, p2, centroid);
+
+        // signed distance to inward half-space minus radius
+        const dx = ball.x - p1.x, dy = ball.y - p1.y;
+        const d = (dx * n.x + dy * n.y) - R;
+
+        const vdotn = ball.vx * n.x + ball.vy * n.y;
+
+        if (d < 0 && vdotn < 0) {
+          // position correction
+          ball.x -= d * n.x; // d < 0 ⇒ push inward
+          ball.y -= d * n.y;
+
+          // velocity reflection with elasticity
+          const impulse = (1 + ballElasticity) * vdotn;
+          ball.vx -= impulse * n.x;
+          ball.vy -= impulse * n.y;
+
+          return; // resolve one edge per frame
+        }
+      }
+    }
+
+    // ===== Ray casting for visualization only =====
+    // Returns { isInside, intersections[] } when debug=true, else boolean
     function isPointInPolygon(point, vertices, debug = false) {
       let inside = false;
-      const x = point.x;
-      const y = point.y;
+      const x = point.x, y = point.y;
       const intersections = [];
 
       for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
         const xi = vertices[i].x, yi = vertices[i].y;
         const xj = vertices[j].x, yj = vertices[j].y;
 
-        // Check if horizontal ray from point to +infinity (to the right) crosses this edge
-        // Ray: from (x, y) to (+∞, y)
-        // Edge: from (xj, yj) to (xi, yi)
-
-        // Does the edge cross the horizontal line y = point.y?
-        // The edge crosses if one vertex is above and one is below (or on) the line
         const intersect = ((yi > y) !== (yj > y)) &&
-                         (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                          (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
 
         if (intersect) {
           inside = !inside;
-
-          // Calculate exact intersection point for visualization
           if (debug) {
-            const intersectX = (xj - xi) * (y - yi) / (yj - yi) + xi;
-            intersections.push({ x: intersectX, y: y });
+            const ix = (xj - xi) * (y - yi) / (yj - yi) + xi;
+            intersections.push({ x: ix, y: y });
           }
         }
       }
 
-      return debug ? { isInside: inside, intersections: intersections } : inside;
+      return debug ? { isInside: inside, intersections } : inside;
     }
 
-    // Find the nearest edge to a point and return details about it
-    function findNearestEdge(point, vertices) {
-      let minDistance = Infinity;
-      let nearestEdge = null;
-
-      for (let i = 0; i < vertices.length; i++) {
-        const p1 = vertices[i];
-        const p2 = vertices[(i + 1) % vertices.length];
-
-        // Vector from p1 to p2
-        const segmentX = p2.x - p1.x;
-        const segmentY = p2.y - p1.y;
-        const segmentLength = Math.sqrt(segmentX * segmentX + segmentY * segmentY);
-
-        // Vector from p1 to point
-        const vectorX = point.x - p1.x;
-        const vectorY = point.y - p1.y;
-
-        // Project point onto the line segment
-        const projection = (vectorX * segmentX + vectorY * segmentY) / segmentLength;
-
-        // Find closest point on segment
-        let closestX, closestY;
-        if (projection <= 0) {
-          closestX = p1.x;
-          closestY = p1.y;
-        } else if (projection >= segmentLength) {
-          closestX = p2.x;
-          closestY = p2.y;
-        } else {
-          closestX = p1.x + (projection * segmentX) / segmentLength;
-          closestY = p1.y + (projection * segmentY) / segmentLength;
-        }
-
-        // Calculate distance
-        const distanceX = point.x - closestX;
-        const distanceY = point.y - closestY;
-        const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-
-        if (distance < minDistance) {
-          minDistance = distance;
-
-          // Calculate edge normal (perpendicular)
-          // We'll determine the correct direction (inward) in the collision handler
-          const normalX = segmentY / segmentLength;
-          const normalY = -segmentX / segmentLength;
-
-          nearestEdge = {
-            p1: p1,
-            p2: p2,
-            closestPoint: { x: closestX, y: closestY },
-            distance: distance,
-            normal: { x: normalX, y: normalY },
-            distanceVector: { x: distanceX, y: distanceY }
-          };
-        }
-      }
-
-      return nearestEdge;
-    }
-
-    // Visualize raycast for debugging
     function drawRaycast(ball, vertices) {
-      const ballCenter = { x: ball.x, y: ball.y };
-      const raycastResult = isPointInPolygon(ballCenter, vertices, true);
+      const res = isPointInPolygon({ x: ball.x, y: ball.y }, vertices, true);
 
-      // Draw ray from ball center to right edge of canvas
+      // Ray line
       ctx.beginPath();
       ctx.moveTo(ball.x, ball.y);
       ctx.lineTo(width, ball.y);
-      ctx.strokeStyle = raycastResult.isInside ? 'rgba(0, 255, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)';
+      ctx.strokeStyle = res.isInside ? 'rgba(0, 160, 0, 0.35)' : 'rgba(200, 0, 0, 0.35)';
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Draw intersection points
-      raycastResult.intersections.forEach(point => {
+      // Intersections
+      for (const p of res.intersections) {
         ctx.beginPath();
-        ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = raycastResult.isInside ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
+        ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = res.isInside ? 'rgba(0, 160, 0, 0.9)' : 'rgba(220, 0, 0, 0.9)';
         ctx.fill();
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1;
         ctx.stroke();
-      });
-
-      // Draw count label
-      ctx.fillStyle = raycastResult.isInside ? 'green' : 'red';
-      ctx.font = '10px Arial';
-      ctx.fillText(`${raycastResult.intersections.length}`, ball.x + 20, ball.y - 5);
-    }
-
-    // Handle raycast collision detection for a ball
-    function handleRaycastCollision(ball, vertices) {
-      // Check if ball center is inside the polygon
-      const ballCenter = { x: ball.x, y: ball.y };
-      const raycastResult = isPointInPolygon(ballCenter, vertices, false);
-      const isInside = typeof raycastResult === 'boolean' ? raycastResult : raycastResult.isInside;
-
-      if (!isInside) {
-        // Ball has escaped! Find nearest edge (the one it crossed)
-        const nearestEdge = findNearestEdge(ballCenter, vertices);
-
-        if (nearestEdge) {
-          // Step 1: Get the outward unit normal to the edge
-          // The distance vector points from closest point on edge to ball (outward)
-          const distLen = Math.sqrt(
-            nearestEdge.distanceVector.x * nearestEdge.distanceVector.x +
-            nearestEdge.distanceVector.y * nearestEdge.distanceVector.y
-          );
-
-          // Outward unit normal (points from edge toward ball, away from shape)
-          let nx = nearestEdge.distanceVector.x / distLen;
-          let ny = nearestEdge.distanceVector.y / distLen;
-
-          // Step 2: Calculate v·n (velocity dot normal)
-          const vx = ball.vx;
-          const vy = ball.vy;
-          let vDotN = vx * nx + vy * ny;
-
-          // Step 3: If v·n > 0, ball is moving away from surface, flip normal
-          // We want the normal to point in the direction the ball came from
-          if (vDotN > 0) {
-            nx = -nx;
-            ny = -ny;
-            vDotN = -vDotN;
-          }
-
-          // Step 4: Apply vector reflection formula with elasticity
-          // v' = v - (1 + e)(v·n)n
-          // This decomposes into:
-          // - Tangential component (unchanged): v_t = v - (v·n)n
-          // - Normal component (flipped with elasticity): -e(v·n)n
-          const factor = (1 + ballElasticity) * vDotN;
-          ball.vx = vx - factor * nx;
-          ball.vy = vy - factor * ny;
-
-          // Step 5: Reposition ball to be just inside the shape
-          // Place it at radius distance from the closest point, along inward direction
-          const inwardX = -nx;  // Inward is opposite of outward
-          const inwardY = -ny;
-          ball.x = nearestEdge.closestPoint.x + inwardX * ball.radius;
-          ball.y = nearestEdge.closestPoint.y + inwardY * ball.radius;
-        }
       }
+
+      // Count
+      ctx.fillStyle = res.isInside ? 'green' : 'red';
+      ctx.font = '10px Arial';
+      ctx.fillText(`${res.intersections.length}`, ball.x + 20, ball.y - 5);
     }
 
-    // ===== BALL-TO-BALL COLLISION DETECTION =====
-
-    // Function to check and handle ball-to-ball collisions
+    // ===== Ball-ball collisions (equal mass) =====
     function checkBallCollision(ball1, ball2) {
-      // Calculate distance between ball centers
       const dx = ball2.x - ball1.x;
       const dy = ball2.y - ball1.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      const minDistance = ball1.radius + ball2.radius;
+      const dist = Math.hypot(dx, dy);
+      const minDist = ball1.radius + ball2.radius;
 
-      // Check if balls are colliding
-      if (distance < minDistance) {
-        // Calculate overlap
-        const overlap = minDistance - distance;
+      if (dist < minDist) {
+        const overlap = minDist - dist;
+        const nx = dx / dist, ny = dy / dist;
 
-        // Normalize the collision vector
-        const nx = dx / distance;
-        const ny = dy / distance;
-
-        // Separate the balls (move each half the overlap distance)
         ball1.x -= nx * overlap * 0.5;
         ball1.y -= ny * overlap * 0.5;
         ball2.x += nx * overlap * 0.5;
         ball2.y += ny * overlap * 0.5;
 
-        // Calculate relative velocity
         const dvx = ball2.vx - ball1.vx;
         const dvy = ball2.vy - ball1.vy;
-
-        // Calculate relative velocity in collision normal direction
         const dvn = dvx * nx + dvy * ny;
 
-        // Only apply collision response if balls are moving toward each other
         if (dvn < 0) {
-          // Apply impulse to both balls (assuming equal mass)
-          const impulse = dvn * ballElasticity;
-
-          ball1.vx += impulse * nx;
-          ball1.vy += impulse * ny;
-          ball2.vx -= impulse * nx;
-          ball2.vy -= impulse * ny;
+          const j = dvn * ballElasticity;
+          ball1.vx += j * nx;
+          ball1.vy += j * ny;
+          ball2.vx -= j * nx;
+          ball2.vy -= j * ny;
         }
       }
     }
 
-    // Animation loop
+    // Animation
+    let lastTime = null;
+
     function animate() {
-      // Clear canvas
       ctx.clearRect(0, 0, width, height);
 
-      // Get time delta for smoother animation
       const now = performance.now();
       const deltaTime = now - (lastTime || now);
       lastTime = now;
-      const timeStep = Math.min(deltaTime / 16.667, 2); // Cap at 2x standard frame time
+      const timeStep = Math.min(deltaTime / 16.667, 2);
 
-      // Rotate shape
       shapeAngle += rotationSpeed * timeStep;
       const vertices = getShapeVertices();
+      const centroid = polygonCentroid(vertices);
 
-      // Draw shape
       drawShape(vertices);
 
-      // Update and draw all balls
-      balls.forEach(ball => {
-        // Apply gravity with time scaling
+      // Integrate motion and resolve
+      for (const ball of balls) {
         ball.vy += gravity * timeStep;
 
-        // Apply friction (simplified air resistance)
-        ball.vx *= Math.pow(1 - friction, timeStep);
-        ball.vy *= Math.pow(1 - friction, timeStep);
+        const decay = Math.pow(1 - friction, timeStep);
+        ball.vx *= decay;
+        ball.vy *= decay;
 
-        // Update ball position
         ball.x += ball.vx * timeStep;
         ball.y += ball.vy * timeStep;
 
-        // Apply collision detection based on selected mode
         if (collisionMode === 'naive') {
-          // NAIVE MODE: Check for overlaps with each edge (distance-based)
-          // This can fail if ball moves too fast and tunnels through
           for (let i = 0; i < vertices.length; i++) {
             const p1 = vertices[i];
             const p2 = vertices[(i + 1) % vertices.length];
             checkCollision(ball, p1, p2);
           }
         } else if (collisionMode === 'raycast') {
-          // RAYCAST MODE: Use point-in-polygon test ONLY
-          // Check if ball center is inside using ray casting
-          // If outside, calculate bounce from nearest edge
-          handleRaycastCollision(ball, vertices);
+          // Robust half-space resolution; rays are visualization only
+          resolveCirclePolygon(ball, vertices, centroid);
         }
 
-        // Keep the ball inside the canvas as a fallback
+        // Canvas bounds fallback
         if (ball.x < ball.radius) {
           ball.x = ball.radius;
           ball.vx = Math.abs(ball.vx) * ballElasticity;
@@ -620,7 +433,6 @@
           ball.x = width - ball.radius;
           ball.vx = -Math.abs(ball.vx) * ballElasticity;
         }
-
         if (ball.y < ball.radius) {
           ball.y = ball.radius;
           ball.vy = Math.abs(ball.vy) * ballElasticity;
@@ -628,36 +440,26 @@
           ball.y = height - ball.radius;
           ball.vy = -Math.abs(ball.vy) * ballElasticity;
         }
+      }
 
-      });
-
-      // Check for ball-to-ball collisions
+      // Ball-ball collisions
       for (let i = 0; i < balls.length; i++) {
         for (let j = i + 1; j < balls.length; j++) {
           checkBallCollision(balls[i], balls[j]);
         }
       }
 
-      // Draw all balls
-      balls.forEach(ball => {
-        drawBall(ball);
-      });
+      // Draw balls
+      for (const ball of balls) drawBall(ball);
 
-      // Draw raycasts for visualization (only in raycast mode)
+      // Draw rays if raycast mode
       if (collisionMode === 'raycast') {
-        balls.forEach(ball => {
-          drawRaycast(ball, vertices);
-        });
+        for (const ball of balls) drawRaycast(ball, vertices);
       }
 
-      // Request next frame
       requestAnimationFrame(animate);
     }
-    
-    // Track time for consistent physics
-    let lastTime = null;
 
-    // Start animation
     animate();
   </script>
 </body>

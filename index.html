@@ -9,32 +9,43 @@
         margin: 0;
         overflow: hidden;
         display: flex;
-        justify-content: center;
+        justify-content: flex-end;
         align-items: center;
-        height: 100vh;
-        background: #f0f0f0;
+        flex-direction: column;
+        min-height: 100vh;
         font-family: 'Courier New', Courier, monospace;
+      }
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 640px;
+        padding: 10px;
+        box-sizing: border-box;
       }
       canvas {
         border: 1px solid #333;
         background: #fff;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        max-width: 100%;
+        height: auto;
+        display: block;
       }
       .controls {
-        position: absolute;
-        bottom: 20px;
+        width: 100%;
         padding: 10px;
-        background: rgba(255, 255, 255, 0.9);
         border-radius: 5px;
         display: flex;
         flex-direction: column;
         gap: 10px;
+        box-sizing: border-box;
       }
       .slider-container {
         display: flex;
         align-items: center;
         gap: 10px;
-        width: 420px;
+        width: 100%;
       }
       .slider-container label {
         width: 100px;
@@ -142,43 +153,47 @@
     </style>
   </head>
   <body>
-    <canvas id="canvas"></canvas>
-    <div class="controls">
-      <div class="shape-selector">
-        <strong>COLLISIONS:</strong>
-        <label
-          ><input type="radio" name="collisionMode" value="naive" checked />
-          NAIVE</label
-        >
-        <label
-          ><input type="radio" name="collisionMode" value="raycast" />
-          RAYCAST</label
-        >
-        <label
-          ><input type="radio" name="collisionMode" value="raycast_predict" />
-          RC_PRE</label
-        >
-      </div>
-      <div class="shape-selector">
-        <strong>SHAPE:</strong>
-        <label><input type="radio" name="shape" value="6" checked /> HEX</label>
-        <label><input type="radio" name="shape" value="3" /> TRI</label>
-        <label><input type="radio" name="shape" value="4" /> RECT</label>
-      </div>
-      <div class="slider-container">
-        <label for="gravity">GRAVITY:</label>
-        <input type="range" id="gravity" />
-        <span id="gravityValue"></span>
-      </div>
-      <div class="slider-container">
-        <label for="rotation">ROTATION:</label>
-        <input type="range" id="rotation" />
-        <span id="rotationValue"></span>
-      </div>
-      <div class="slider-container">
-        <label for="elasticity">BOUNCE:</label>
-        <input type="range" id="elasticity" />
-        <span id="elasticityValue"></span>
+    <div class="container">
+      <canvas id="canvas"></canvas>
+      <div class="controls">
+        <div class="shape-selector">
+          <strong>COLLISIONS:</strong>
+          <label
+            ><input type="radio" name="collisionMode" value="naive" checked />
+            NAIVE</label
+          >
+          <label
+            ><input type="radio" name="collisionMode" value="raycast" />
+            RAYCAST</label
+          >
+          <label
+            ><input type="radio" name="collisionMode" value="raycast_predict" />
+            RC_PRE</label
+          >
+        </div>
+        <div class="shape-selector">
+          <strong>SHAPE:</strong>
+          <label
+            ><input type="radio" name="shape" value="6" checked /> HEX</label
+          >
+          <label><input type="radio" name="shape" value="3" /> TRI</label>
+          <label><input type="radio" name="shape" value="4" /> RECT</label>
+        </div>
+        <div class="slider-container">
+          <label for="gravity">GRAVITY:</label>
+          <input type="range" id="gravity" />
+          <span id="gravityValue"></span>
+        </div>
+        <div class="slider-container">
+          <label for="rotation">ROTATION:</label>
+          <input type="range" id="rotation" />
+          <span id="rotationValue"></span>
+        </div>
+        <div class="slider-container">
+          <label for="elasticity">BOUNCE:</label>
+          <input type="range" id="elasticity" />
+          <span id="elasticityValue"></span>
+        </div>
       </div>
     </div>
 
@@ -202,6 +217,8 @@
       const RAYCAST_DOT_RADIUS = 6;
       const RAYCAST_DOT_BORDER_WIDTH = 1;
       const RAYCAST_TEXT_SIZE = 22;
+      const BACKGROUND_COLOR = '#f0f0f0';
+      const OPTIONS_BACKGROUND_COLOR = 'rgba(255, 255, 255, 0)';
       // const BALL_COLORS = [
       //   'rgb(255, 0, 0)', // Red (primary)
       //   'rgb(255, 255, 0)', // Yellow (primary)
@@ -257,6 +274,11 @@
       // Set canvas dimensions from config
       canvas.width = CANVAS_WIDTH;
       canvas.height = CANVAS_HEIGHT;
+
+      // Set background colors from config
+      document.body.style.backgroundColor = BACKGROUND_COLOR;
+      document.querySelector('.controls').style.backgroundColor =
+        OPTIONS_BACKGROUND_COLOR;
 
       const W = CANVAS_WIDTH,
         H = CANVAS_HEIGHT;

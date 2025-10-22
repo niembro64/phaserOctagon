@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ball Bouncing in Spinning Hexagon</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      border: 1px solid #333;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      padding: 10px;
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 300px;
+    }
+    .slider-container label {
+      width: 120px;
+    }
+    button {
+      padding: 8px 16px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="600" height="600"></canvas>
+  <div class="controls">
+    <div class="slider-container">
+      <label for="gravity">Gravity:</label>
+      <input type="range" id="gravity" min="0" max="0.5" step="0.01" value="0.2">
+      <span id="gravityValue">0.5</span>
+    </div>
+    <div class="slider-container">
+      <label for="friction">Friction:</label>
+      <input type="range" id="friction" min="0" max="0.1" step="0.001" value="0.02">
+      <span id="frictionValue">0.02</span>
+    </div>
+    <div class="slider-container">
+      <label for="rotation">Rotation Speed:</label>
+      <input type="range" id="rotation" min="-0.03" max="0.5" step="0.001" value="0.01">
+      <span id="rotationValue">0.01</span>
+    </div>
+    <div class="slider-container">
+      <label for="elasticity">Ball Elasticity:</label>
+      <input type="range" id="elasticity" min="0.1" max="0.99" step="0.01" value="0.8">
+      <span id="elasticityValue">0.8</span>
+    </div>
+    <button id="resetButton">Reset Simulation</button>
+  </div>
+
+  <script>
+    // Get the canvas and context
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    // Controls
+    const gravitySlider = document.getElementById('gravity');
+    const frictionSlider = document.getElementById('friction');
+    const rotationSlider = document.getElementById('rotation');
+    const elasticitySlider = document.getElementById('elasticity');
+    const resetButton = document.getElementById('resetButton');
+    const gravityValue = document.getElementById('gravityValue');
+    const frictionValue = document.getElementById('frictionValue');
+    const rotationValue = document.getElementById('rotationValue');
+    const elasticityValue = document.getElementById('elasticityValue');
+
+    // Physics parameters
+    let gravity = 0.2; // Default gravity value
+    let friction = parseFloat(frictionSlider.value);
+    let rotationSpeed = parseFloat(rotationSlider.value);
+    let ballElasticity = parseFloat(elasticitySlider.value);
+    
+    // Update slider to match initial value
+    gravitySlider.value = gravity;
+    
+    // Hexagon parameters
+    const hexagonRadius = 220;
+    let hexagonAngle = 0;
+    
+    // Ball parameters
+    const BALL_RADIUS = 15;
+    let ball = resetBall();
+    
+    // Update value displays
+    gravityValue.textContent = gravity;
+    frictionValue.textContent = friction;
+    rotationValue.textContent = rotationSpeed;
+    elasticityValue.textContent = ballElasticity;
+
+    // Event listeners for controls
+    gravitySlider.addEventListener('input', () => {
+      gravity = parseFloat(gravitySlider.value);
+      gravityValue.textContent = gravity;
+    });
+
+    frictionSlider.addEventListener('input', () => {
+      friction = parseFloat(frictionSlider.value);
+      frictionValue.textContent = friction;
+    });
+
+    rotationSlider.addEventListener('input', () => {
+      rotationSpeed = parseFloat(rotationSlider.value);
+      rotationValue.textContent = rotationSpeed;
+    });
+
+    elasticitySlider.addEventListener('input', () => {
+      ballElasticity = parseFloat(elasticitySlider.value);
+      elasticityValue.textContent = ballElasticity;
+    });
+
+    resetButton.addEventListener('click', () => {
+      ball = resetBall();
+    });
+
+    // Function to reset the ball
+    function resetBall() {
+      return {
+        x: centerX,
+        y: centerY - 50, // Start slightly above center
+        vx: (Math.random() - 0.5) * 2, // Lower initial velocity
+        vy: 0, // Start with zero vertical velocity
+        radius: BALL_RADIUS,
+        color: `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`
+      };
+    }
+
+    // Function to get hexagon vertices
+    function getHexagonVertices() {
+      const vertices = [];
+      for (let i = 0; i < 6; i++) {
+        const angle = hexagonAngle + i * Math.PI / 3;
+        vertices.push({
+          x: centerX + hexagonRadius * Math.cos(angle),
+          y: centerY + hexagonRadius * Math.sin(angle)
+        });
+      }
+      return vertices;
+    }
+
+    // Function to draw the hexagon
+    function drawHexagon(vertices) {
+      ctx.beginPath();
+      ctx.moveTo(vertices[0].x, vertices[0].y);
+      for (let i = 1; i < vertices.length; i++) {
+        ctx.lineTo(vertices[i].x, vertices[i].y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    // Function to draw the ball
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = ball.color;
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Function to check collision with a line segment
+    function checkCollision(p1, p2) {
+      // Vector from p1 to p2
+      const segmentX = p2.x - p1.x;
+      const segmentY = p2.y - p1.y;
+      const segmentLength = Math.sqrt(segmentX * segmentX + segmentY * segmentY);
+      
+      // Unit normal vector to the line segment (pointing inward)
+      const nx = segmentY / segmentLength;
+      const ny = -segmentX / segmentLength;
+      
+      // Vector from p1 to ball
+      const vectorX = ball.x - p1.x;
+      const vectorY = ball.y - p1.y;
+      
+      // Project the vector from p1 to ball onto the segment
+      const projection = (vectorX * segmentX + vectorY * segmentY) / segmentLength;
+      
+      // Find the closest point on the segment to the ball
+      let closestX, closestY;
+      
+      if (projection <= 0) {
+        closestX = p1.x;
+        closestY = p1.y;
+      } else if (projection >= segmentLength) {
+        closestX = p2.x;
+        closestY = p2.y;
+      } else {
+        closestX = p1.x + (projection * segmentX) / segmentLength;
+        closestY = p1.y + (projection * segmentY) / segmentLength;
+      }
+      
+      // Calculate distance from ball to closest point
+      const distanceX = ball.x - closestX;
+      const distanceY = ball.y - closestY;
+      const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+      
+      // Check if there's a collision
+      if (distance < ball.radius) {
+        // Calculate overlap
+        const overlap = ball.radius - distance;
+        
+        // Calculate normal direction
+        const normalX = distanceX / distance;
+        const normalY = distanceY / distance;
+        
+        // Move the ball out of the wall
+        ball.x += overlap * normalX;
+        ball.y += overlap * normalY;
+        
+        // Calculate the normal and tangential components of velocity
+        const normalVelocity = ball.vx * normalX + ball.vy * normalY;
+        
+        // Only bounce if the ball is moving toward the wall
+        if (normalVelocity < 0) {
+          // Apply bounce effect with elasticity
+          const newNormalVelocity = -normalVelocity * ballElasticity;
+          
+          // Update velocity
+          ball.vx += (newNormalVelocity - normalVelocity) * normalX;
+          ball.vy += (newNormalVelocity - normalVelocity) * normalY;
+        }
+        
+        return true;
+      }
+      
+      return false;
+    }
+
+    // Animation loop
+    function animate() {
+      // Clear canvas
+      ctx.clearRect(0, 0, width, height);
+      
+      // Get time delta for smoother animation
+      const now = performance.now();
+      const deltaTime = now - (lastTime || now);
+      lastTime = now;
+      const timeStep = Math.min(deltaTime / 16.667, 2); // Cap at 2x standard frame time
+      
+      // Rotate hexagon
+      hexagonAngle += rotationSpeed * timeStep;
+      const vertices = getHexagonVertices();
+      
+      // Draw hexagon
+      drawHexagon(vertices);
+      
+      // Apply gravity with time scaling
+      ball.vy += gravity * timeStep;
+      
+      // Apply friction (simplified air resistance)
+      ball.vx *= Math.pow(1 - friction, timeStep);
+      ball.vy *= Math.pow(1 - friction, timeStep);
+      
+      // Update ball position
+      ball.x += ball.vx * timeStep;
+      ball.y += ball.vy * timeStep;
+      
+      // Check for collisions with each side of the hexagon
+      for (let i = 0; i < vertices.length; i++) {
+        const p1 = vertices[i];
+        const p2 = vertices[(i + 1) % vertices.length];
+        checkCollision(p1, p2);
+      }
+      
+      // Keep the ball inside the canvas as a fallback
+      if (ball.x < ball.radius) {
+        ball.x = ball.radius;
+        ball.vx = Math.abs(ball.vx) * ballElasticity;
+      } else if (ball.x > width - ball.radius) {
+        ball.x = width - ball.radius;
+        ball.vx = -Math.abs(ball.vx) * ballElasticity;
+      }
+      
+      if (ball.y < ball.radius) {
+        ball.y = ball.radius;
+        ball.vy = Math.abs(ball.vy) * ballElasticity;
+      } else if (ball.y > height - ball.radius) {
+        ball.y = height - ball.radius;
+        ball.vy = -Math.abs(ball.vy) * ballElasticity;
+      }
+      
+      // Draw ball
+      drawBall();
+      
+      // Request next frame
+      requestAnimationFrame(animate);
+    }
+    
+    // Track time for consistent physics
+    let lastTime = null;
+
+    // Start animation
+    animate();
+  </script>
+</body>
+</html>

@@ -95,8 +95,8 @@
       </div>
       <div class="shape-selector">
         <strong>SHAPE:</strong>
-        <label><input type="radio" name="shape" value="6" /> HEX</label>
-        <label><input type="radio" name="shape" value="3" checked /> TRI</label>
+        <label><input type="radio" name="shape" value="6" checked /> HEX</label>
+        <label><input type="radio" name="shape" value="3" /> TRI</label>
         <label><input type="radio" name="shape" value="4" /> RECT</label>
       </div>
       <div class="slider-container">
@@ -114,7 +114,6 @@
         <input type="range" id="elasticity" />
         <span id="elasticityValue"></span>
       </div>
-      <button id="resetButton">RESET BALLS</button>
     </div>
 
     <script>
@@ -122,9 +121,21 @@
       const CANVAS_WIDTH = 600;
       const CANVAS_HEIGHT = 600;
       const POLYGON_RADIUS = 220;
+      const POLYGON_BORDER_WIDTH = 4;
       const RECTANGLE_WIDTH_RATIO = 2.2;
       const RECTANGLE_HEIGHT_RATIO = 0.6;
       const BALL_RADIUS = 16;
+      const BALL_BORDER_WIDTH = 2;
+      const RAYCAST_LINE_WIDTH = 2;
+      const RAYCAST_INSIDE_COLOR = 'rgba(0,160,0,.2)';
+      const RAYCAST_OUTSIDE_COLOR = 'rgba(200,0,0,.2)';
+      const RAYCAST_DOT_INSIDE_COLOR = 'rgba(0,160,0,1)';
+      const RAYCAST_DOT_OUTSIDE_COLOR = 'rgba(220,0,0,1)';
+      const RAYCAST_TEXT_INSIDE_COLOR = 'rgba(0,160,0,1)';
+      const RAYCAST_TEXT_OUTSIDE_COLOR = 'rgba(200,0,0,1)';
+      const RAYCAST_DOT_RADIUS = 6;
+      const RAYCAST_DOT_BORDER_WIDTH = 1;
+      const RAYCAST_TEXT_SIZE = 22;
       // const BALL_COLORS = [
       //   'rgb(255, 0, 0)', // Red (primary)
       //   'rgb(255, 255, 0)', // Yellow (primary)
@@ -145,7 +156,7 @@
       const GRAVITY_MIN = 0;
       const GRAVITY_MAX = 1;
       const GRAVITY_STEP = 0.01;
-      const GRAVITY_DEFAULT = 0.2;
+      const GRAVITY_DEFAULT = 0.5;
       const ROTATION_MIN = -0.2;
       const ROTATION_MAX = 0.2;
       const ROTATION_STEP = 0.001;
@@ -153,7 +164,7 @@
       const BOUNCE_MIN = 0.1;
       const BOUNCE_MAX = 0.99;
       const BOUNCE_STEP = 0.01;
-      const BOUNCE_DEFAULT = 0.99;
+      const BOUNCE_DEFAULT = 0.92;
       const MAX_COLLISION_ITERATIONS = 3;
       const MAX_COLLISION_ITERATIONS_PREDICT = 2;
       const EPSILON = 1e-7;
@@ -179,7 +190,6 @@
       const gravitySlider = document.getElementById('gravity');
       const rotationSlider = document.getElementById('rotation');
       const elasticitySlider = document.getElementById('elasticity');
-      const resetButton = document.getElementById('resetButton');
       const gravityValue = document.getElementById('gravityValue');
       const rotationValue = document.getElementById('rotationValue');
       const elasticityValue = document.getElementById('elasticityValue');
@@ -215,7 +225,7 @@
       let eRest = parseFloat(elasticitySlider.value);
       let mode = 'naive';
 
-      let sides = 3;
+      let sides = 6;
       let theta = 0;
 
       // Balls
@@ -255,7 +265,6 @@
         eRest = parseFloat(elasticitySlider.value);
         elasticityValue.textContent = fmt(eRest);
       });
-      resetButton.addEventListener('click', resetBalls);
       shapeRadios.forEach((r) =>
         r.addEventListener('change', (e) => {
           sides = parseInt(e.target.value, 10);
@@ -302,7 +311,7 @@
           ctx.lineTo(verts[i].x, verts[i].y);
         ctx.closePath();
         ctx.strokeStyle = '#333';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = POLYGON_BORDER_WIDTH;
         ctx.stroke();
       }
       function drawBall(b) {
@@ -311,7 +320,7 @@
         ctx.fillStyle = b.color;
         ctx.fill();
         ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = BALL_BORDER_WIDTH;
         ctx.stroke();
       }
 
@@ -694,23 +703,25 @@
         ctx.moveTo(b.x, b.y);
         ctx.lineTo(W, b.y);
         ctx.strokeStyle = res.inside
-          ? 'rgba(0,160,0,.75)'
-          : 'rgba(200,0,0,.75)';
-        ctx.lineWidth = 4;
+          ? RAYCAST_INSIDE_COLOR
+          : RAYCAST_OUTSIDE_COLOR;
+        ctx.lineWidth = RAYCAST_LINE_WIDTH;
         ctx.stroke();
         for (const p of res.xs) {
           ctx.beginPath();
-          ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, RAYCAST_DOT_RADIUS, 0, Math.PI * 2);
           ctx.fillStyle = res.inside
-            ? 'rgba(0,160,0,.95)'
-            : 'rgba(220,0,0,.95)';
+            ? RAYCAST_DOT_INSIDE_COLOR
+            : RAYCAST_DOT_OUTSIDE_COLOR;
           ctx.fill();
           ctx.strokeStyle = '#000';
-          ctx.lineWidth = 1;
+          ctx.lineWidth = RAYCAST_DOT_BORDER_WIDTH;
           ctx.stroke();
         }
-        ctx.fillStyle = res.inside ? 'green' : 'red';
-        ctx.font = '18px "Courier New",Courier,monospace';
+        ctx.fillStyle = res.inside
+          ? RAYCAST_TEXT_INSIDE_COLOR
+          : RAYCAST_TEXT_OUTSIDE_COLOR;
+        ctx.font = `${RAYCAST_TEXT_SIZE}px "Courier New",Courier,monospace`;
         ctx.fillText(`${res.xs.length}`, b.x + 22, b.y - 8);
       }
 

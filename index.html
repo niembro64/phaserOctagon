@@ -69,13 +69,13 @@
     <div class="shape-selector">
       <strong>Shape:</strong>
       <label>
-        <input type="radio" name="shape" value="3" /> Triangle
+        <input type="radio" name="shape" value="3" checked /> Triangle
       </label>
       <label>
         <input type="radio" name="shape" value="4" /> Square
       </label>
       <label>
-        <input type="radio" name="shape" value="6" checked /> Hexagon
+        <input type="radio" name="shape" value="6" /> Hexagon
       </label>
     </div>
     <div class="slider-container">
@@ -85,7 +85,7 @@
     </div>
     <div class="slider-container">
       <label for="friction">Friction:</label>
-      <input type="range" id="friction" min="0" max="0.1" step="0.001" value="0.02">
+      <input type="range" id="friction" min="0" max="0.1" step="0.001" value="0">
       <span id="frictionValue">+0.00</span>
     </div>
     <div class="slider-container">
@@ -95,7 +95,7 @@
     </div>
     <div class="slider-container">
       <label for="elasticity">Ball Elasticity:</label>
-      <input type="range" id="elasticity" min="0.1" max="0.99" step="0.01" value="0.8">
+      <input type="range" id="elasticity" min="0.1" max="0.99" step="0.01" value="0.99">
       <span id="elasticityValue">+0.00</span>
     </div>
     <button id="resetButton">Reset Simulation</button>
@@ -135,7 +135,7 @@
     let ballElasticity = parseFloat(elasticitySlider.value);
 
     // Shape parameters
-    let shapeSides = 6; // Default to hexagon
+    let shapeSides = 3; // Default to triangle
     const shapeRadius = 220;
     let shapeAngle = 0;
 
@@ -315,6 +315,49 @@
       return false;
     }
 
+    // Function to check and handle ball-to-ball collisions
+    function checkBallCollision(ball1, ball2) {
+      // Calculate distance between ball centers
+      const dx = ball2.x - ball1.x;
+      const dy = ball2.y - ball1.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const minDistance = ball1.radius + ball2.radius;
+
+      // Check if balls are colliding
+      if (distance < minDistance) {
+        // Calculate overlap
+        const overlap = minDistance - distance;
+
+        // Normalize the collision vector
+        const nx = dx / distance;
+        const ny = dy / distance;
+
+        // Separate the balls (move each half the overlap distance)
+        ball1.x -= nx * overlap * 0.5;
+        ball1.y -= ny * overlap * 0.5;
+        ball2.x += nx * overlap * 0.5;
+        ball2.y += ny * overlap * 0.5;
+
+        // Calculate relative velocity
+        const dvx = ball2.vx - ball1.vx;
+        const dvy = ball2.vy - ball1.vy;
+
+        // Calculate relative velocity in collision normal direction
+        const dvn = dvx * nx + dvy * ny;
+
+        // Only apply collision response if balls are moving toward each other
+        if (dvn < 0) {
+          // Apply impulse to both balls (assuming equal mass)
+          const impulse = dvn * ballElasticity;
+
+          ball1.vx += impulse * nx;
+          ball1.vy += impulse * ny;
+          ball2.vx -= impulse * nx;
+          ball2.vy -= impulse * ny;
+        }
+      }
+    }
+
     // Animation loop
     function animate() {
       // Clear canvas
@@ -370,7 +413,17 @@
           ball.vy = -Math.abs(ball.vy) * ballElasticity;
         }
 
-        // Draw ball
+      });
+
+      // Check for ball-to-ball collisions
+      for (let i = 0; i < balls.length; i++) {
+        for (let j = i + 1; j < balls.length; j++) {
+          checkBallCollision(balls[i], balls[j]);
+        }
+      }
+
+      // Draw all balls
+      balls.forEach(ball => {
         drawBall(ball);
       });
 

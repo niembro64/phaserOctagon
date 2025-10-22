@@ -5,14 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Collision Detection Comparison: Naive vs Raycast</title>
   <style>
-    body{margin:0;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh;background:#f0f0f0;font-family:Arial,sans-serif}
+    body{margin:0;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh;background:#f0f0f0;font-family:'Courier New',Courier,monospace}
     canvas{border:1px solid #333;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.1)}
-    .controls{position:absolute;bottom:20px;padding:10px;background:rgba(255,255,255,.8);border-radius:5px;display:flex;flex-direction:column;gap:10px}
-    .slider-container{display:flex;align-items:center;gap:10px;width:300px}
-    .slider-container label{width:120px}
+    .controls{position:absolute;bottom:20px;padding:10px;background:rgba(255,255,255,.9);border-radius:5px;display:flex;flex-direction:column;gap:10px}
+    .slider-container{display:flex;align-items:center;gap:10px;width:380px}
+    .slider-container label{width:100px;flex-shrink:0}
+    .slider-container input[type="range"]{flex:1;min-width:0}
+    .slider-container span{width:60px;flex-shrink:0;text-align:right}
     .shape-selector{display:flex;gap:10px;margin-bottom:5px;align-items:center}
     .shape-selector label{display:flex;align-items:center;gap:5px;cursor:pointer}
-    button{padding:8px 16px;cursor:pointer;background:#4CAF50;color:#fff;border:none;border-radius:4px}
+    button{padding:8px 16px;cursor:pointer;background:#4CAF50;color:#fff;border:none;border-radius:4px;font-family:'Courier New',Courier,monospace}
     button:hover{background:#45a049}
   </style>
 </head>
@@ -36,13 +38,8 @@
     <span id="gravityValue">+0.00</span>
   </div>
   <div class="slider-container">
-    <label for="friction">Friction:</label>
-    <input type="range" id="friction" min="0" max="0.1" step="0.001" value="0">
-    <span id="frictionValue">+0.00</span>
-  </div>
-  <div class="slider-container">
     <label for="rotation">Rotation:</label>
-    <input type="range" id="rotation" min="-0.03" max="0.5" step="0.001" value="0.01">
+    <input type="range" id="rotation" min="-0.5" max="0.5" step="0.001" value="0.01">
     <span id="rotationValue">+0.00</span>
   </div>
   <div class="slider-container">
@@ -61,12 +58,10 @@ const CX = W/2, CY = H/2;
 
 // Controls
 const gravitySlider = document.getElementById('gravity');
-const frictionSlider = document.getElementById('friction');
 const rotationSlider = document.getElementById('rotation');
 const elasticitySlider = document.getElementById('elasticity');
 const resetButton = document.getElementById('resetButton');
 const gravityValue = document.getElementById('gravityValue');
-const frictionValue = document.getElementById('frictionValue');
 const rotationValue = document.getElementById('rotationValue');
 const elasticityValue = document.getElementById('elasticityValue');
 const shapeRadios = document.querySelectorAll('input[name="shape"]');
@@ -76,7 +71,6 @@ function fmt(x){ const s = parseFloat(x).toFixed(2); return s>=0?`+${s}`:s; }
 
 // Parameters
 let gravity = parseFloat(gravitySlider.value);
-let friction = parseFloat(frictionSlider.value);
 let omega = parseFloat(rotationSlider.value); // rad per 60Hz unit
 let eRest = parseFloat(elasticitySlider.value);
 let mode = 'naive';
@@ -104,11 +98,9 @@ resetBalls();
 
 // UI
 gravityValue.textContent = fmt(gravity);
-frictionValue.textContent = fmt(friction);
 rotationValue.textContent = fmt(omega);
 elasticityValue.textContent = fmt(eRest);
 gravitySlider.addEventListener('input',()=>{gravity=parseFloat(gravitySlider.value); gravityValue.textContent=fmt(gravity);});
-frictionSlider.addEventListener('input',()=>{friction=parseFloat(frictionSlider.value); frictionValue.textContent=fmt(friction);});
 rotationSlider.addEventListener('input',()=>{omega=parseFloat(rotationSlider.value); rotationValue.textContent=fmt(omega);});
 elasticitySlider.addEventListener('input',()=>{eRest=parseFloat(elasticitySlider.value); elasticityValue.textContent=fmt(eRest);});
 resetButton.addEventListener('click', resetBalls);
@@ -119,8 +111,8 @@ collisionRadios.forEach(r=>r.addEventListener('change',e=>{mode=e.target.value;}
 function getVerticesWorld(){
   const verts = [];
   if(sides === 4){
-    // Rectangle: width > height
-    const w = R_POLY * 1.4, h = R_POLY * 0.9;
+    // Rectangle: width > height (elongated)
+    const w = R_POLY * 1.8, h = R_POLY * 0.7;
     const corners = [
       {x: -w/2, y: -h/2},
       {x:  w/2, y: -h/2},
@@ -371,7 +363,7 @@ function drawRays(b, verts){
     ctx.fill(); ctx.strokeStyle='#000'; ctx.lineWidth=1; ctx.stroke();
   }
   ctx.fillStyle = res.inside ? 'green' : 'red';
-  ctx.font = '18px Arial';
+  ctx.font = '18px "Courier New",Courier,monospace';
   ctx.fillText(`${res.xs.length}`, b.x+22, b.y-8);
 }
 
@@ -388,10 +380,8 @@ function animate(){
   drawPolygon(vertsWorld);
 
   for(const b of balls){
-    // Forces in world
+    // Forces in world (zero friction assumed)
     b.vy += gravity * dt;
-    const decay = Math.pow(1 - friction, dt);
-    b.vx *= decay; b.vy *= decay;
 
     if (mode==='naive'){
       b.x += b.vx * dt; b.y += b.vy * dt;

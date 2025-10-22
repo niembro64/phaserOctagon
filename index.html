@@ -1,466 +1,434 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Collision Detection Comparison: Naive vs Raycast</title>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: #f0f0f0;
-      font-family: Arial, sans-serif;
-    }
-    canvas {
-      border: 1px solid #333;
-      background-color: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    .controls {
-      position: absolute;
-      bottom: 20px;
-      padding: 10px;
-      background-color: rgba(255, 255, 255, 0.8);
-      border-radius: 5px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .slider-container {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: 300px;
-    }
-    .slider-container label { width: 120px; }
-    .shape-selector {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 5px;
-      align-items: center;
-    }
-    .shape-selector label {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      cursor: pointer;
-    }
-    button {
-      padding: 8px 16px;
-      cursor: pointer;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 4px;
-    }
-    button:hover { background-color: #45a049; }
+    body{margin:0;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh;background:#f0f0f0;font-family:Arial,sans-serif}
+    canvas{border:1px solid #333;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.1)}
+    .controls{position:absolute;bottom:20px;padding:10px;background:rgba(255,255,255,.8);border-radius:5px;display:flex;flex-direction:column;gap:10px}
+    .slider-container{display:flex;align-items:center;gap:10px;width:300px}
+    .slider-container label{width:120px}
+    .shape-selector{display:flex;gap:10px;margin-bottom:5px;align-items:center}
+    .shape-selector label{display:flex;align-items:center;gap:5px;cursor:pointer}
+    button{padding:8px 16px;cursor:pointer;background:#4CAF50;color:#fff;border:none;border-radius:4px}
+    button:hover{background:#45a049}
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="600" height="600"></canvas>
-  <div class="controls">
-    <div class="shape-selector">
-      <strong>Collision Mode:</strong>
-      <label><input type="radio" name="collisionMode" value="naive" checked /> Naive</label>
-      <label><input type="radio" name="collisionMode" value="raycast" /> Raycast</label>
-    </div>
-    <div class="shape-selector">
-      <strong>Shape:</strong>
-      <label><input type="radio" name="shape" value="3" checked /> Triangle</label>
-      <label><input type="radio" name="shape" value="4" /> Square</label>
-      <label><input type="radio" name="shape" value="6" /> Hexagon</label>
-    </div>
-    <div class="slider-container">
-      <label for="gravity">Gravity:</label>
-      <input type="range" id="gravity" min="0" max="0.5" step="0.01" value="0.2">
-      <span id="gravityValue">+0.00</span>
-    </div>
-    <div class="slider-container">
-      <label for="friction">Friction:</label>
-      <input type="range" id="friction" min="0" max="0.1" step="0.001" value="0">
-      <span id="frictionValue">+0.00</span>
-    </div>
-    <div class="slider-container">
-      <label for="rotation">Rotation Speed:</label>
-      <input type="range" id="rotation" min="-0.03" max="0.5" step="0.001" value="0.01">
-      <span id="rotationValue">+0.00</span>
-    </div>
-    <div class="slider-container">
-      <label for="elasticity">Ball Elasticity:</label>
-      <input type="range" id="elasticity" min="0.1" max="0.99" step="0.01" value="0.99">
-      <span id="elasticityValue">+0.00</span>
-    </div>
-    <button id="resetButton">Reset Simulation</button>
+<canvas id="canvas" width="600" height="600"></canvas>
+<div class="controls">
+  <div class="shape-selector">
+    <strong>Collisions:</strong>
+    <label><input type="radio" name="collisionMode" value="naive" checked> Naive</label>
+    <label><input type="radio" name="collisionMode" value="raycast"> Raycast</label>
   </div>
+  <div class="shape-selector">
+    <strong>Shape:</strong>
+    <label><input type="radio" name="shape" value="3" checked> Triangle</label>
+    <label><input type="radio" name="shape" value="4"> Rectangle</label>
+    <label><input type="radio" name="shape" value="6"> Hexagon</label>
+  </div>
+  <div class="slider-container">
+    <label for="gravity">Gravity:</label>
+    <input type="range" id="gravity" min="0" max="0.5" step="0.01" value="0.2">
+    <span id="gravityValue">+0.00</span>
+  </div>
+  <div class="slider-container">
+    <label for="friction">Friction:</label>
+    <input type="range" id="friction" min="0" max="0.1" step="0.001" value="0">
+    <span id="frictionValue">+0.00</span>
+  </div>
+  <div class="slider-container">
+    <label for="rotation">Rotation:</label>
+    <input type="range" id="rotation" min="-0.03" max="0.5" step="0.001" value="0.01">
+    <span id="rotationValue">+0.00</span>
+  </div>
+  <div class="slider-container">
+    <label for="elasticity">Bounce:</label>
+    <input type="range" id="elasticity" min="0.1" max="0.99" step="0.01" value="0.99">
+    <span id="elasticityValue">+0.00</span>
+  </div>
+  <button id="resetButton">Reset Simulation</button>
+</div>
 
-  <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width, height = canvas.height;
-    const centerX = width / 2, centerY = height / 2;
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const CX = W/2, CY = H/2;
 
-    // Controls
-    const gravitySlider = document.getElementById('gravity');
-    const frictionSlider = document.getElementById('friction');
-    const rotationSlider = document.getElementById('rotation');
-    const elasticitySlider = document.getElementById('elasticity');
-    const resetButton = document.getElementById('resetButton');
-    const gravityValue = document.getElementById('gravityValue');
-    const frictionValue = document.getElementById('frictionValue');
-    const rotationValue = document.getElementById('rotationValue');
-    const elasticityValue = document.getElementById('elasticityValue');
-    const shapeRadios = document.querySelectorAll('input[name="shape"]');
-    const collisionModeRadios = document.querySelectorAll('input[name="collisionMode"]');
+// Controls
+const gravitySlider = document.getElementById('gravity');
+const frictionSlider = document.getElementById('friction');
+const rotationSlider = document.getElementById('rotation');
+const elasticitySlider = document.getElementById('elasticity');
+const resetButton = document.getElementById('resetButton');
+const gravityValue = document.getElementById('gravityValue');
+const frictionValue = document.getElementById('frictionValue');
+const rotationValue = document.getElementById('rotationValue');
+const elasticityValue = document.getElementById('elasticityValue');
+const shapeRadios = document.querySelectorAll('input[name="shape"]');
+const collisionRadios = document.querySelectorAll('input[name="collisionMode"]');
 
-    function formatNumber(value) {
-      const num = parseFloat(value).toFixed(2);
-      return num >= 0 ? '+' + num : num;
+function fmt(x){ const s = parseFloat(x).toFixed(2); return s>=0?`+${s}`:s; }
+
+// Parameters
+let gravity = parseFloat(gravitySlider.value);
+let friction = parseFloat(frictionSlider.value);
+let omega = parseFloat(rotationSlider.value); // rad per 60Hz unit
+let eRest = parseFloat(elasticitySlider.value);
+let mode = 'naive';
+
+let sides = 3;
+const R_POLY = 220;
+let theta = 0;
+
+// Balls
+const R_BALL = 15, N_BALL = 5;
+let balls = [];
+function newBall(){
+  const a = Math.random()*Math.PI*2, d = Math.random()*80;
+  return {
+    x: CX + Math.cos(a)*d,
+    y: CY + Math.sin(a)*d,
+    vx: (Math.random()-0.5)*4,
+    vy: (Math.random()-0.5)*4,
+    radius: R_BALL,
+    color: `rgb(${55+Math.floor(Math.random()*200)},${55+Math.floor(Math.random()*200)},${55+Math.floor(Math.random()*200)})`
+  };
+}
+function resetBalls(){ balls = Array.from({length:N_BALL}, newBall); }
+resetBalls();
+
+// UI
+gravityValue.textContent = fmt(gravity);
+frictionValue.textContent = fmt(friction);
+rotationValue.textContent = fmt(omega);
+elasticityValue.textContent = fmt(eRest);
+gravitySlider.addEventListener('input',()=>{gravity=parseFloat(gravitySlider.value); gravityValue.textContent=fmt(gravity);});
+frictionSlider.addEventListener('input',()=>{friction=parseFloat(frictionSlider.value); frictionValue.textContent=fmt(friction);});
+rotationSlider.addEventListener('input',()=>{omega=parseFloat(rotationSlider.value); rotationValue.textContent=fmt(omega);});
+elasticitySlider.addEventListener('input',()=>{eRest=parseFloat(elasticitySlider.value); elasticityValue.textContent=fmt(eRest);});
+resetButton.addEventListener('click', resetBalls);
+shapeRadios.forEach(r=>r.addEventListener('change',e=>{sides=parseInt(e.target.value,10); resetBalls();}));
+collisionRadios.forEach(r=>r.addEventListener('change',e=>{mode=e.target.value;}));
+
+// Geometry
+function getVerticesWorld(){
+  const verts = [];
+  if(sides === 4){
+    // Rectangle: width > height
+    const w = R_POLY * 1.4, h = R_POLY * 0.9;
+    const corners = [
+      {x: -w/2, y: -h/2},
+      {x:  w/2, y: -h/2},
+      {x:  w/2, y:  h/2},
+      {x: -w/2, y:  h/2}
+    ];
+    for(const c of corners){
+      const rotated = rot(c.x, c.y, theta);
+      verts.push({x: CX + rotated.x, y: CY + rotated.y});
     }
-
-    // Physics parameters
-    let gravity = parseFloat(gravitySlider.value);
-    let friction = parseFloat(frictionSlider.value);
-    let rotationSpeed = parseFloat(rotationSlider.value);
-    let ballElasticity = parseFloat(elasticitySlider.value);
-
-    // Collision mode
-    let collisionMode = 'naive'; // 'naive' or 'raycast' (raycast = rays shown + robust half-space resolution)
-
-    // Shape parameters
-    let shapeSides = 3;
-    const shapeRadius = 220;
-    let shapeAngle = 0;
-
-    // Balls
-    const BALL_RADIUS = 15;
-    const NUM_BALLS = 5;
-    let balls = [];
-
-    function resetBall() {
-      const angle = Math.random() * Math.PI * 2;
-      const distance = Math.random() * 80;
-      return {
-        x: centerX + Math.cos(angle) * distance,
-        y: centerY + Math.sin(angle) * distance,
-        vx: (Math.random() - 0.5) * 4,
-        vy: (Math.random() - 0.5) * 4,
-        radius: BALL_RADIUS,
-        color: `rgb(${Math.floor(Math.random() * 200 + 55)}, ${Math.floor(Math.random() * 200 + 55)}, ${Math.floor(Math.random() * 200 + 55)})`
-      };
+  } else {
+    for(let i=0;i<sides;i++){
+      const a = theta + i*2*Math.PI/sides;
+      verts.push({x:CX + R_POLY*Math.cos(a), y:CY + R_POLY*Math.sin(a)});
     }
+  }
+  return verts;
+}
+function drawPolygon(verts){
+  ctx.beginPath();
+  ctx.moveTo(verts[0].x, verts[0].y);
+  for(let i=1;i<verts.length;i++) ctx.lineTo(verts[i].x, verts[i].y);
+  ctx.closePath();
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+function drawBall(b){
+  ctx.beginPath();
+  ctx.arc(b.x,b.y,b.radius,0,Math.PI*2);
+  ctx.fillStyle=b.color; ctx.fill();
+  ctx.strokeStyle='#000'; ctx.lineWidth=1; ctx.stroke();
+}
 
-    function initializeBalls() {
-      balls = [];
-      for (let i = 0; i < NUM_BALLS; i++) balls.push(resetBall());
+// Linear algebra
+function rot(x,y,a){ const c=Math.cos(a), s=Math.sin(a); return {x:c*x - s*y, y:s*x + c*y}; }
+function worldToLocalPoint(x,y){ const dx=x-CX, dy=y-CY; return rot(dx,dy,-theta); }
+function localToWorldPoint(x,y){ const p=rot(x,y,theta); return {x:p.x+CX, y:p.y+CY}; }
+function worldToLocalVec(vx,vy){ return rot(vx,vy,-theta); }
+function localToWorldVec(vx,vy){ return rot(vx,vy,theta); }
+function dot(ax,ay,bx,by){ return ax*bx + ay*by; }
+
+const EPS = 1e-7;
+
+// Build edges in LOCAL frame (static polygon this frame)
+function buildEdgesLocal(vertsWorld){
+  // Map to local
+  const verts = vertsWorld.map(p=>worldToLocalPoint(p.x,p.y));
+  // Ensure CCW ordering (compute signed area)
+  let area = 0;
+  for(let i=0;i<verts.length;i++){
+    const a=verts[i], b=verts[(i+1)%verts.length];
+    area += a.x*b.y - b.x*a.y;
+  }
+  const CCW = area > 0;
+  if(!CCW) verts.reverse();
+
+  const centroid = {x:0,y:0};
+  for(const v of verts){ centroid.x += v.x; centroid.y += v.y; }
+  centroid.x /= verts.length; centroid.y /= verts.length;
+
+  const edges=[];
+  for(let i=0;i<verts.length;i++){
+    const a=verts[i], b=verts[(i+1)%verts.length];
+    const ex=b.x-a.x, ey=b.y-a.y;
+    const L = Math.hypot(ex,ey);
+    const ehat = {x:ex/L, y:ey/L};
+    // Inward normal for CCW is left normal
+    let nx = -ehat.y, ny = ehat.x;
+    // Safety flip if mis-oriented (rare)
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    const toC = {x:centroid.x-mx, y:centroid.y-my};
+    if (nx*toC.x + ny*toC.y < 0){ nx=-nx; ny=-ny; }
+    edges.push({a,b,L,ehat,n:{x:nx,y:ny}});
+  }
+  return {edges, vertsLocal:verts};
+}
+
+// Quadratic solve sorted
+function solveQuadratic(a,b,c){
+  const D=b*b-4*a*c; if(D<0) return [];
+  const s=Math.sqrt(D);
+  const q=-(b + Math.sign(b||1)*s)/2;
+  return [q/a, c/q].sort((u,v)=>u-v);
+}
+
+// Swept circle TOI in LOCAL frame (static polygon this frame)
+function sweptTOI_Local(p0, v, R, edges){
+  let bestT = Infinity, bestN=null;
+
+  // Edge planes offset by R
+  for(const ed of edges){
+    const nx=ed.n.x, ny=ed.n.y;
+    const denom = dot(nx,ny, v.x,v.y);
+    if (denom >= -EPS) continue; // not moving into plane
+
+    const dist0 = R - dot(nx,ny, p0.x - ed.a.x, p0.y - ed.a.y);
+    const t = dist0 / denom;
+    if (t < -EPS || t > 1 + EPS) continue;
+
+    const qx = p0.x + v.x*t, qy = p0.y + v.y*t;
+    const ex=ed.b.x - ed.a.x, ey=ed.b.y - ed.a.y, L2 = ed.L*ed.L;
+    const u = ((qx - ed.a.x)*ex + (qy - ed.a.y)*ey)/L2;
+    if (u >= -EPS && u <= 1 + EPS){
+      if (t < bestT){ bestT=Math.max(0,t); bestN={x:nx,y:ny}; }
     }
-    initializeBalls();
+  }
 
-    gravityValue.textContent = formatNumber(gravity);
-    frictionValue.textContent = formatNumber(friction);
-    rotationValue.textContent = formatNumber(rotationSpeed);
-    elasticityValue.textContent = formatNumber(ballElasticity);
-
-    gravitySlider.addEventListener('input', () => {
-      gravity = parseFloat(gravitySlider.value);
-      gravityValue.textContent = formatNumber(gravity);
-    });
-    frictionSlider.addEventListener('input', () => {
-      friction = parseFloat(frictionSlider.value);
-      frictionValue.textContent = formatNumber(friction);
-    });
-    rotationSlider.addEventListener('input', () => {
-      rotationSpeed = parseFloat(rotationSlider.value);
-      rotationValue.textContent = formatNumber(rotationSpeed);
-    });
-    elasticitySlider.addEventListener('input', () => {
-      ballElasticity = parseFloat(elasticitySlider.value);
-      elasticityValue.textContent = formatNumber(ballElasticity);
-    });
-    resetButton.addEventListener('click', () => { initializeBalls(); });
-    shapeRadios.forEach(r => r.addEventListener('change', e => {
-      shapeSides = parseInt(e.target.value, 10);
-      initializeBalls();
-    }));
-    collisionModeRadios.forEach(r => r.addEventListener('change', e => {
-      collisionMode = e.target.value;
-    }));
-
-    function getShapeVertices() {
-      const vertices = [];
-      for (let i = 0; i < shapeSides; i++) {
-        const angleOffset = shapeSides === 4 ? Math.PI / 4 : 0;
-        const a = shapeAngle + angleOffset + (i * 2 * Math.PI / shapeSides);
-        vertices.push({
-          x: centerX + shapeRadius * Math.cos(a),
-          y: centerY + shapeRadius * Math.sin(a)
-        });
-      }
-      return vertices;
-    }
-
-    function drawShape(vertices) {
-      ctx.beginPath();
-      ctx.moveTo(vertices[0].x, vertices[0].y);
-      for (let i = 1; i < vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
-      ctx.closePath();
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-    }
-
-    function drawBall(ball) {
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-      ctx.fillStyle = ball.color;
-      ctx.fill();
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-
-    // ===== Naive edge overlap check (kept for comparison) =====
-    function checkCollision(ball, p1, p2) {
-      const segX = p2.x - p1.x, segY = p2.y - p1.y;
-      const segLen = Math.hypot(segX, segY);
-
-      const vx = ball.x - p1.x, vy = ball.y - p1.y;
-      const proj = (vx * segX + vy * segY) / segLen;
-
-      let cx, cy;
-      if (proj <= 0) { cx = p1.x; cy = p1.y; }
-      else if (proj >= segLen) { cx = p2.x; cy = p2.y; }
-      else { cx = p1.x + (proj * segX) / segLen; cy = p1.y + (proj * segY) / segLen; }
-
-      const dx = ball.x - cx, dy = ball.y - cy;
-      const dist = Math.hypot(dx, dy);
-
-      if (dist < ball.radius) {
-        const overlap = ball.radius - dist;
-        const ndx = dx / dist, ndy = dy / dist;
-
-        ball.x += overlap * ndx;
-        ball.y += overlap * ndy;
-
-        const vn = ball.vx * ndx + ball.vy * ndy;
-        if (vn < 0) {
-          const newVn = -vn * ballElasticity;
-          ball.vx += (newVn - vn) * ndx;
-          ball.vy += (newVn - vn) * ndy;
-        }
-        return true;
-      }
-      return false;
-    }
-
-    // ===== Robust circle vs convex polygon resolution (half-spaces) =====
-    function polygonCentroid(vertices) {
-      let cx = 0, cy = 0;
-      for (const v of vertices) { cx += v.x; cy += v.y; }
-      const n = vertices.length;
-      return { x: cx / n, y: cy / n };
-    }
-
-    function inwardNormal(p1, p2, centroid) {
-      const ex = p2.x - p1.x, ey = p2.y - p1.y;
-      let nx = -ey, ny = ex; // left normal
-      const mx = (p1.x + p2.x) * 0.5, my = (p1.y + p2.y) * 0.5;
-      const tcx = centroid.x - mx, tcy = centroid.y - my;
-      if (nx * tcx + ny * tcy < 0) { nx = -nx; ny = -ny; }
-      const len = Math.hypot(nx, ny);
-      return { x: nx / len, y: ny / len };
-    }
-
-    function resolveCirclePolygon(ball, vertices, centroid) {
-      const R = ball.radius;
-      for (let i = 0; i < vertices.length; i++) {
-        const p1 = vertices[i];
-        const p2 = vertices[(i + 1) % vertices.length];
-        const n = inwardNormal(p1, p2, centroid);
-
-        // signed distance to inward half-space minus radius
-        const dx = ball.x - p1.x, dy = ball.y - p1.y;
-        const d = (dx * n.x + dy * n.y) - R;
-
-        const vdotn = ball.vx * n.x + ball.vy * n.y;
-
-        if (d < 0 && vdotn < 0) {
-          // position correction
-          ball.x -= d * n.x; // d < 0 ⇒ push inward
-          ball.y -= d * n.y;
-
-          // velocity reflection with elasticity
-          const impulse = (1 + ballElasticity) * vdotn;
-          ball.vx -= impulse * n.x;
-          ball.vy -= impulse * n.y;
-
-          return; // resolve one edge per frame
-        }
-      }
-    }
-
-    // ===== Ray casting for visualization only =====
-    // Returns { isInside, intersections[] } when debug=true, else boolean
-    function isPointInPolygon(point, vertices, debug = false) {
-      let inside = false;
-      const x = point.x, y = point.y;
-      const intersections = [];
-
-      for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
-        const xi = vertices[i].x, yi = vertices[i].y;
-        const xj = vertices[j].x, yj = vertices[j].y;
-
-        const intersect = ((yi > y) !== (yj > y)) &&
-                          (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-
-        if (intersect) {
-          inside = !inside;
-          if (debug) {
-            const ix = (xj - xi) * (y - yi) / (yj - yi) + xi;
-            intersections.push({ x: ix, y: y });
-          }
-        }
-      }
-
-      return debug ? { isInside: inside, intersections } : inside;
-    }
-
-    function drawRaycast(ball, vertices) {
-      const res = isPointInPolygon({ x: ball.x, y: ball.y }, vertices, true);
-
-      // Ray line
-      ctx.beginPath();
-      ctx.moveTo(ball.x, ball.y);
-      ctx.lineTo(width, ball.y);
-      ctx.strokeStyle = res.isInside ? 'rgba(0, 160, 0, 0.35)' : 'rgba(200, 0, 0, 0.35)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Intersections
-      for (const p of res.intersections) {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = res.isInside ? 'rgba(0, 160, 0, 0.9)' : 'rgba(220, 0, 0, 0.9)';
-        ctx.fill();
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-
-      // Count
-      ctx.fillStyle = res.isInside ? 'green' : 'red';
-      ctx.font = '10px Arial';
-      ctx.fillText(`${res.intersections.length}`, ball.x + 20, ball.y - 5);
-    }
-
-    // ===== Ball-ball collisions (equal mass) =====
-    function checkBallCollision(ball1, ball2) {
-      const dx = ball2.x - ball1.x;
-      const dy = ball2.y - ball1.y;
-      const dist = Math.hypot(dx, dy);
-      const minDist = ball1.radius + ball2.radius;
-
-      if (dist < minDist) {
-        const overlap = minDist - dist;
-        const nx = dx / dist, ny = dy / dist;
-
-        ball1.x -= nx * overlap * 0.5;
-        ball1.y -= ny * overlap * 0.5;
-        ball2.x += nx * overlap * 0.5;
-        ball2.y += ny * overlap * 0.5;
-
-        const dvx = ball2.vx - ball1.vx;
-        const dvy = ball2.vy - ball1.vy;
-        const dvn = dvx * nx + dvy * ny;
-
-        if (dvn < 0) {
-          const j = dvn * ballElasticity;
-          ball1.vx += j * nx;
-          ball1.vy += j * ny;
-          ball2.vx -= j * nx;
-          ball2.vy -= j * ny;
-        }
+  // Vertex discs radius R
+  for(const ed of edges){
+    for(const c of [ed.a, ed.b]){
+      const rx = p0.x - c.x, ry = p0.y - c.y;
+      const A = dot(v.x,v.y, v.x,v.y);
+      if (A < EPS) continue;
+      const B = 2*dot(v.x,v.y, rx,ry);
+      const C = dot(rx,ry, rx,ry) - R*R;
+      const roots = solveQuadratic(A,B,C);
+      for(const t of roots){
+        if (t < -EPS || t > 1 + EPS) continue;
+        const qx = p0.x + v.x*t, qy = p0.y + v.y*t;
+        let nx = qx - c.x, ny = qy - c.y;
+        const len = Math.hypot(nx,ny); if (len < EPS) continue;
+        nx/=len; ny/=len;
+        if (dot(v.x,v.y,nx,ny) >= -EPS) continue;
+        if (t < bestT){ bestT=Math.max(0,t); bestN={x:nx,y:ny}; }
       }
     }
+  }
 
-    // Animation
-    let lastTime = null;
+  if (bestT !== Infinity) return {hit:true,t:bestT,n:bestN};
+  return {hit:false};
+}
 
-    function animate() {
-      ctx.clearRect(0, 0, width, height);
+// Integrate one frame in LOCAL frame using continuous raycast
+function integrateRaycastLocal(ball, vertsWorld, dt){
+  const {edges} = buildEdgesLocal(vertsWorld);
 
-      const now = performance.now();
-      const deltaTime = now - (lastTime || now);
-      lastTime = now;
-      const timeStep = Math.min(deltaTime / 16.667, 2);
+  // Transform ball to local
+  let pL = worldToLocalPoint(ball.x, ball.y);
+  let vL = worldToLocalVec(ball.vx, ball.vy);
 
-      shapeAngle += rotationSpeed * timeStep;
-      const vertices = getShapeVertices();
-      const centroid = polygonCentroid(vertices);
+  let remaining = dt;
+  const maxHits = 3;
 
-      drawShape(vertices);
+  for(let i=0;i<maxHits && remaining>EPS;i++){
+    // Scale velocity to unit interval by displacement over remaining
+    const vStep = {x:vL.x*remaining, y:vL.y*remaining};
+    const toi = sweptTOI_Local(pL, vStep, ball.radius, edges);
 
-      // Integrate motion and resolve
-      for (const ball of balls) {
-        ball.vy += gravity * timeStep;
-
-        const decay = Math.pow(1 - friction, timeStep);
-        ball.vx *= decay;
-        ball.vy *= decay;
-
-        ball.x += ball.vx * timeStep;
-        ball.y += ball.vy * timeStep;
-
-        if (collisionMode === 'naive') {
-          for (let i = 0; i < vertices.length; i++) {
-            const p1 = vertices[i];
-            const p2 = vertices[(i + 1) % vertices.length];
-            checkCollision(ball, p1, p2);
-          }
-        } else if (collisionMode === 'raycast') {
-          // Robust half-space resolution; rays are visualization only
-          resolveCirclePolygon(ball, vertices, centroid);
-        }
-
-        // Canvas bounds fallback
-        if (ball.x < ball.radius) {
-          ball.x = ball.radius;
-          ball.vx = Math.abs(ball.vx) * ballElasticity;
-        } else if (ball.x > width - ball.radius) {
-          ball.x = width - ball.radius;
-          ball.vx = -Math.abs(ball.vx) * ballElasticity;
-        }
-        if (ball.y < ball.radius) {
-          ball.y = ball.radius;
-          ball.vy = Math.abs(ball.vy) * ballElasticity;
-        } else if (ball.y > height - ball.radius) {
-          ball.y = height - ball.radius;
-          ball.vy = -Math.abs(ball.vy) * ballElasticity;
-        }
-      }
-
-      // Ball-ball collisions
-      for (let i = 0; i < balls.length; i++) {
-        for (let j = i + 1; j < balls.length; j++) {
-          checkBallCollision(balls[i], balls[j]);
-        }
-      }
-
-      // Draw balls
-      for (const ball of balls) drawBall(ball);
-
-      // Draw rays if raycast mode
-      if (collisionMode === 'raycast') {
-        for (const ball of balls) drawRaycast(ball, vertices);
-      }
-
-      requestAnimationFrame(animate);
+    if (!toi.hit){
+      // No hit: advance whole remaining
+      pL.x += vL.x*remaining;
+      pL.y += vL.y*remaining;
+      remaining = 0;
+      break;
     }
 
-    animate();
-  </script>
+    // Advance to impact
+    pL.x += vL.x * (remaining * toi.t);
+    pL.y += vL.y * (remaining * toi.t);
+
+    // Reflect velocity in LOCAL frame
+    const vrn = vL.x*toi.n.x + vL.y*toi.n.y;
+    if (vrn < 0){
+      const j = (1 + eRest) * vrn;
+      vL.x -= j * toi.n.x;
+      vL.y -= j * toi.n.y;
+    }
+
+    // Nudge inward
+    pL.x += toi.n.x * 1e-4;
+    pL.y += toi.n.y * 1e-4;
+
+    // Consume time
+    remaining *= (1 - toi.t);
+  }
+
+  // Final advance for any leftover
+  if (remaining > EPS){
+    pL.x += vL.x * remaining;
+    pL.y += vL.y * remaining;
+    remaining = 0;
+  }
+
+  // Correct small drift if outside
+  const {edges:edges2} = buildEdgesLocal(vertsWorld);
+  let worstD = 0, worstN = null;
+  for(const ed of edges2){
+    const d = ( (pL.x - ed.a.x)*ed.n.x + (pL.y - ed.a.y)*ed.n.y ) - ball.radius;
+    if (d < worstD){ worstD = d; worstN = ed.n; }
+  }
+  if (worstD < -1e-4 && worstN){
+    pL.x -= worstD * worstN.x;
+    pL.y -= worstD * worstN.y;
+    const vn = vL.x*worstN.x + vL.y*worstN.y;
+    if (vn < 0){
+      const j = (1 + eRest) * vn;
+      vL.x -= j * worstN.x;
+      vL.y -= j * worstN.y;
+    }
+  }
+
+  // Back to world
+  const pW = localToWorldPoint(pL.x, pL.y);
+  const vW = localToWorldVec(vL.x, vL.y);
+  ball.x = pW.x; ball.y = pW.y;
+  ball.vx = vW.x; ball.vy = vW.y;
+}
+
+// Naive overlap comparator
+function naiveEdgeCheck(ball, verts){
+  for(let i=0;i<verts.length;i++){
+    const p1=verts[i], p2=verts[(i+1)%verts.length];
+    const sx=p2.x-p1.x, sy=p2.y-p1.y, sl=Math.hypot(sx,sy);
+    const vx=ball.x-p1.x, vy=ball.y-p1.y, proj=(vx*sx+vy*sy)/sl;
+    let cx,cy;
+    if (proj<=0){ cx=p1.x; cy=p1.y; }
+    else if (proj>=sl){ cx=p2.x; cy=p2.y; }
+    else { cx=p1.x + (proj*sx)/sl; cy=p1.y + (proj*sy)/sl; }
+    const dx=ball.x-cx, dy=ball.y-cy, dist=Math.hypot(dx,dy);
+    if (dist<ball.radius){
+      const nx=dx/dist, ny=dy/dist, overlap=ball.radius-dist;
+      ball.x += nx*overlap; ball.y += ny*overlap;
+      const vn = ball.vx*nx + ball.vy*ny;
+      if (vn<0){ const j=(-1 - eRest)*vn; ball.vx += j*nx; ball.vy += j*ny; }
+    }
+  }
+}
+
+// Ray visualization (world)
+function raycastVisual(point, verts){
+  let inside=false, x=point.x, y=point.y, xs=[];
+  for(let i=0,j=verts.length-1;i<verts.length;j=i++){
+    const xi=verts[i].x, yi=verts[i].y, xj=verts[j].x, yj=verts[j].y;
+    const hit = ((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi) + xi);
+    if (hit){ inside=!inside; const ix=(xj-xi)*(y-yi)/(yj-yi)+xi; xs.push({x:ix,y}); }
+  }
+  return {inside, xs};
+}
+function drawRays(b, verts){
+  const res = raycastVisual({x:b.x,y:b.y}, verts);
+  ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(W, b.y);
+  ctx.strokeStyle = res.inside ? 'rgba(0,160,0,.75)' : 'rgba(200,0,0,.75)';
+  ctx.lineWidth = 4; ctx.stroke();
+  for(const p of res.xs){
+    ctx.beginPath(); ctx.arc(p.x,p.y,5,0,Math.PI*2);
+    ctx.fillStyle = res.inside ? 'rgba(0,160,0,.95)' : 'rgba(220,0,0,.95)';
+    ctx.fill(); ctx.strokeStyle='#000'; ctx.lineWidth=1; ctx.stroke();
+  }
+  ctx.fillStyle = res.inside ? 'green' : 'red';
+  ctx.font = '18px Arial';
+  ctx.fillText(`${res.xs.length}`, b.x+22, b.y-8);
+}
+
+// Animation
+let last=null;
+function animate(){
+  ctx.clearRect(0,0,W,H);
+  const now=performance.now();
+  const dt = Math.min((now-(last||now))/16.667, 2); // vs 60Hz
+  last = now;
+
+  theta += omega * dt;
+  const vertsWorld = getVerticesWorld();
+  drawPolygon(vertsWorld);
+
+  for(const b of balls){
+    // Forces in world
+    b.vy += gravity * dt;
+    const decay = Math.pow(1 - friction, dt);
+    b.vx *= decay; b.vy *= decay;
+
+    if (mode==='naive'){
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      naiveEdgeCheck(b, vertsWorld);
+    } else {
+      // Local-frame continuous raycast
+      integrateRaycastLocal(b, vertsWorld, dt);
+    }
+
+    // Canvas fallback
+    if (b.x < b.radius){ b.x=b.radius; b.vx=Math.abs(b.vx)*eRest; }
+    else if (b.x > W-b.radius){ b.x=W-b.radius; b.vx=-Math.abs(b.vx)*eRest; }
+    if (b.y < b.radius){ b.y=b.radius; b.vy=Math.abs(b.vy)*eRest; }
+    else if (b.y > H-b.radius){ b.y=H-b.radius; b.vy=-Math.abs(b.vy)*eRest; }
+  }
+
+  // Ball-ball
+  for(let i=0;i<balls.length;i++){
+    for(let j=i+1;j<balls.length;j++){
+      const a=balls[i], b=balls[j];
+      const dx=b.x-a.x, dy=b.y-a.y, dist=Math.hypot(dx,dy), min=a.radius+b.radius;
+      if (dist<min){
+        const nx=dx/dist, ny=dy/dist, overlap=min-dist;
+        a.x -= nx*overlap*0.5; a.y -= ny*overlap*0.5;
+        b.x += nx*overlap*0.5; b.y += ny*overlap*0.5;
+        const dvx=b.vx-a.vx, dvy=b.vy-a.vy, dvn=dvx*nx+dvy*ny;
+        if (dvn<0){ const j=dvn*eRest; a.vx+=j*nx; a.vy+=j*ny; b.vx-=j*nx; b.vy-=j*ny; }
+      }
+    }
+  }
+
+  for(const b of balls) drawBall(b);
+  if (mode==='raycast') for(const b of balls) drawRays(b, vertsWorld);
+
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
 </body>
 </html>

@@ -1,910 +1,881 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Collision Detection Comparison: Naive vs Raycast</title>
     <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        flex-direction: column;
-        min-height: 100vh;
-        font-family: 'Courier New', Courier, monospace;
-      }
-      .container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-        max-width: 640px;
-        padding: 10px;
-        box-sizing: border-box;
-      }
-      canvas {
-        border: 1px solid #333;
-        background: #fff;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        max-width: 100%;
-        height: auto;
-        display: block;
-      }
-      .controls {
-        width: 100%;
-        padding: 10px;
-        border-radius: 5px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        box-sizing: border-box;
-      }
-      .slider-container {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-      }
-      .slider-container label {
-        width: 100px;
-        flex-shrink: 0;
-      }
-      .slider-container input[type='range'] {
-        flex: 1;
-        min-width: 0;
-        height: 24px;
-        -webkit-appearance: none;
-        appearance: none;
-        background: transparent;
-        outline: none;
-      }
-      .slider-container input[type='range']::-webkit-slider-runnable-track {
-        width: 100%;
-        height: 12px;
-        border-radius: 6px;
-        background: #888;
-        border: 2px solid #333;
-        cursor: pointer;
-      }
-      .slider-container input[type='range']::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: #4a90e2;
-        cursor: pointer;
-        border: 2px solid #333;
-        margin-top: -8px;
-      }
-      .slider-container input[type='range']::-moz-range-track {
-        width: 100%;
-        height: 12px;
-        border-radius: 6px;
-        background: #888;
-        border: 2px solid #333;
-        cursor: pointer;
-      }
-      .slider-container input[type='range']::-moz-range-thumb {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: #4a90e2;
-        cursor: pointer;
-        border: 2px solid #333;
-      }
-      .slider-container input[type='range']::-ms-track {
-        width: 100%;
-        height: 12px;
-        background: transparent;
-        border-color: transparent;
-        color: transparent;
-        cursor: pointer;
-      }
-      .slider-container input[type='range']::-ms-fill-lower {
-        background: #888;
-        border: 2px solid #333;
-        border-radius: 6px;
-      }
-      .slider-container input[type='range']::-ms-fill-upper {
-        background: #888;
-        border: 2px solid #333;
-        border-radius: 6px;
-      }
-      .slider-container input[type='range']::-ms-thumb {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: #4a90e2;
-        cursor: pointer;
-        border: 2px solid #333;
-      }
-      .slider-container span {
-        width: 60px;
-        flex-shrink: 0;
-        text-align: right;
-      }
-      .shape-selector {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 5px;
-        align-items: center;
-      }
-      .shape-selector label {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        cursor: pointer;
-      }
-      button {
-        padding: 8px 16px;
-        cursor: pointer;
-        background: #4caf50;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        font-family: 'Courier New', Courier, monospace;
-      }
-      button:hover {
-        background: #45a049;
-      }
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center; /* Center content horizontally */
+            align-items: flex-start;
+            min-height: 100vh;
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #f0f0f0;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 640px;
+            padding: 20px 10px;
+            box-sizing: border-box;
+            gap: 15px; /* Space between canvas and controls */
+        }
+        
+        canvas {
+            border: 1px solid #333;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .controls {
+            width: 100%;
+            padding: 15px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.92);
+            -webkit-backdrop-filter: saturate(140%) blur(6px);
+            backdrop-filter: saturate(140%) blur(6px);
+            border: 1px solid #ddd;
+            /* Removed sticky positioning */
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        
+        .slider-container label {
+            width: 100px;
+            flex-shrink: 0;
+        }
+        
+        .slider-container input[type='range'] {
+            flex: 1;
+            min-width: 0;
+            height: 24px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            outline: none;
+        }
+        
+        .slider-container input[type='range']::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            background: #888;
+            border: 2px solid #333;
+            cursor: pointer;
+        }
+        
+        .slider-container input[type='range']::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #4a90e2;
+            cursor: pointer;
+            border: 2px solid #333;
+            margin-top: -8px;
+        }
+        
+        .slider-container input[type='range']::-moz-range-track {
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            background: #888;
+            border: 2px solid #333;
+            cursor: pointer;
+        }
+        
+        .slider-container input[type='range']::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #4a90e2;
+            cursor: pointer;
+            border: 2px solid #333;
+        }
+        
+        .slider-container input[type='range']::-ms-track {
+            width: 100%;
+            height: 12px;
+            background: transparent;
+            border-color: transparent;
+            color: transparent;
+            cursor: pointer;
+        }
+        
+        .slider-container input[type='range']::-ms-fill-lower {
+            background: #888;
+            border: 2px solid #333;
+            border-radius: 6px;
+        }
+        
+        .slider-container input[type='range']::-ms-fill-upper {
+            background: #888;
+            border: 2px solid #333;
+            border-radius: 6px;
+        }
+        
+        .slider-container input[type='range']::-ms-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #4a90e2;
+            cursor: pointer;
+            border: 2px solid #333;
+        }
+        
+        .slider-container span {
+            width: 60px;
+            flex-shrink: 0;
+            text-align: right;
+        }
+        
+        .shape-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .shape-selector label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        
+        button {
+            padding: 8px 16px;
+            cursor: pointer;
+            background: #4caf50;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .container {
+                padding: 10px 5px;
+            }
+            
+            .shape-selector {
+                font-size: 14px;
+            }
+            
+            .slider-container label {
+                width: 80px;
+                font-size: 14px;
+            }
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="container">
-      <canvas id="canvas"></canvas>
-      <div class="controls">
-        <div class="shape-selector">
-          <strong>COLLISIONS:</strong>
-          <label
-            ><input type="radio" name="collisionMode" value="naive" checked />
-            NAIVE</label
-          >
-          <label
-            ><input type="radio" name="collisionMode" value="raycast" />
-            RAYCAST</label
-          >
-          <label
-            ><input type="radio" name="collisionMode" value="raycast_predict" />
-            RC_PRE</label
-          >
+        <canvas id="canvas"></canvas>
+        <div class="controls">
+            <div class="shape-selector">
+                <strong>COLLISIONS:</strong>
+                <label>
+                    <input type="radio" name="collisionMode" value="naive" checked />
+                    NAIVE
+                </label>
+                <label>
+                    <input type="radio" name="collisionMode" value="raycast" />
+                    RAYCAST
+                </label>
+                <label>
+                    <input type="radio" name="collisionMode" value="raycast_predict" />
+                    RC_PRE
+                </label>
+            </div>
+            <div class="shape-selector">
+                <strong>SHAPE:</strong>
+                <label>
+                    <input type="radio" name="shape" value="6" checked />
+                    HEX
+                </label>
+                <label>
+                    <input type="radio" name="shape" value="3" />
+                    TRI
+                </label>
+                <label>
+                    <input type="radio" name="shape" value="4" />
+                    RECT
+                </label>
+            </div>
+            <div class="slider-container">
+                <label for="gravity">GRAVITY:</label>
+                <input type="range" id="gravity" />
+                <span id="gravityValue"></span>
+            </div>
+            <div class="slider-container">
+                <label for="rotation">ROTATION:</label>
+                <input type="range" id="rotation" />
+                <span id="rotationValue"></span>
+            </div>
+            <div class="slider-container">
+                <label for="elasticity">BOUNCE:</label>
+                <input type="range" id="elasticity" />
+                <span id="elasticityValue"></span>
+            </div>
         </div>
-        <div class="shape-selector">
-          <strong>SHAPE:</strong>
-          <label
-            ><input type="radio" name="shape" value="6" checked /> HEX</label
-          >
-          <label><input type="radio" name="shape" value="3" /> TRI</label>
-          <label><input type="radio" name="shape" value="4" /> RECT</label>
-        </div>
-        <div class="slider-container">
-          <label for="gravity">GRAVITY:</label>
-          <input type="range" id="gravity" />
-          <span id="gravityValue"></span>
-        </div>
-        <div class="slider-container">
-          <label for="rotation">ROTATION:</label>
-          <input type="range" id="rotation" />
-          <span id="rotationValue"></span>
-        </div>
-        <div class="slider-container">
-          <label for="elasticity">BOUNCE:</label>
-          <input type="range" id="elasticity" />
-          <span id="elasticityValue"></span>
-        </div>
-      </div>
     </div>
 
     <script>
-      // ===== HARDCODED CONFIGURATION =====
-      const CANVAS_WIDTH = 600;
-      const CANVAS_HEIGHT = 600;
-      const POLYGON_RADIUS = 220;
-      const POLYGON_BORDER_WIDTH = 4;
-      const RECTANGLE_WIDTH_RATIO = 2.2;
-      const RECTANGLE_HEIGHT_RATIO = 0.6;
-      const BALL_RADIUS = 16;
-      const BALL_BORDER_WIDTH = 2;
-      const RAYCAST_LINE_WIDTH = 2;
-      const RAYCAST_INSIDE_COLOR = 'rgba(0,160,0,.2)';
-      const RAYCAST_OUTSIDE_COLOR = 'rgba(200,0,0,.2)';
-      const RAYCAST_DOT_INSIDE_COLOR = 'rgba(0,160,0,1)';
-      const RAYCAST_DOT_OUTSIDE_COLOR = 'rgba(220,0,0,1)';
-      const RAYCAST_TEXT_INSIDE_COLOR = 'rgba(0,160,0,1)';
-      const RAYCAST_TEXT_OUTSIDE_COLOR = 'rgba(200,0,0,1)';
-      const RAYCAST_DOT_RADIUS = 6;
-      const RAYCAST_DOT_BORDER_WIDTH = 1;
-      const RAYCAST_TEXT_SIZE = 22;
-      const BACKGROUND_COLOR = '#f0f0f0';
-      const OPTIONS_BACKGROUND_COLOR = 'rgba(255, 255, 255, 0)';
-      // const BALL_COLORS = [
-      //   'rgb(255, 0, 0)', // Red (primary)
-      //   'rgb(255, 255, 0)', // Yellow (primary)
-      //   'rgb(0, 0, 255)', // Blue (primary)
-      //   'rgb(0, 255, 0)', // Green (secondary)
-      //   'rgb(255, 165, 0)', // Orange (secondary)
-      //   'rgb(160, 32, 240)', // Purple (secondary)
-      // ];
-      // const BALL_COLORS = [
-      //   'rgb(150, 84, 66)', // Brick red (muted)
-      //   'rgb(168, 142, 58)', // Ochre yellow (muted)
-      //   'rgb(63, 94, 122)', // Slate blue (muted)
-      //   'rgb(98, 121, 82)', // Olive green (muted)
-      //   'rgb(176, 104, 70)', // Burnt orange (muted)
-      //   'rgb(110, 90, 120)', // Dusty purple (muted)
-      // ];
+        // ===== HARDCODED CONFIGURATION =====
+        const CANVAS_WIDTH = 600;
+        const CANVAS_HEIGHT = 600;
+        const POLYGON_RADIUS = 220;
+        const POLYGON_BORDER_WIDTH = 4;
+        const RECTANGLE_WIDTH_RATIO = 2.2;
+        const RECTANGLE_HEIGHT_RATIO = 0.6;
+        const BALL_RADIUS = 16;
+        const BALL_BORDER_WIDTH = 2;
+        const RAYCAST_LINE_WIDTH = 2;
+        const RAYCAST_INSIDE_COLOR = 'rgba(0,160,0,.2)';
+        const RAYCAST_OUTSIDE_COLOR = 'rgba(200,0,0,.2)';
+        const RAYCAST_DOT_INSIDE_COLOR = 'rgba(0,160,0,1)';
+        const RAYCAST_DOT_OUTSIDE_COLOR = 'rgba(220,0,0,1)';
+        const RAYCAST_TEXT_INSIDE_COLOR = 'rgba(0,160,0,1)';
+        const RAYCAST_TEXT_OUTSIDE_COLOR = 'rgba(200,0,0,1)';
+        const RAYCAST_DOT_RADIUS = 6;
+        const RAYCAST_DOT_BORDER_WIDTH = 1;
+        const RAYCAST_TEXT_SIZE = 22;
+        const BACKGROUND_COLOR = '#f0f0f0';
+        const OPTIONS_BACKGROUND_COLOR = 'rgba(255, 255, 255, 0)';
 
-      // Muted, near-equal perceived brightness (Rec.709 luma ≈115)
-      // Earthy, muted primaries/secondaries with matched perceived brightness (~115 Rec.709)
-      const BALL_COLORS = [
-        'rgb(210, 90, 60)', // Red
-        'rgb(152, 114, 18)', // Yellow
-        'rgb(42, 128, 222)', // Blue
-        'rgb(35, 150, 35)', // Green
-        'rgb(190, 95, 30)', // Orange
-        'rgb(205, 80, 205)', // Purple
-      ];
+        // Muted, near-equal perceived brightness (Rec.709 luma ≈115)
+        // Earthy, muted primaries/secondaries with matched perceived brightness (~115 Rec.709)
+        const BALL_COLORS = [
+            'rgb(210, 90, 60)',   // Red
+            'rgb(152, 114, 18)',  // Yellow
+            'rgb(42, 128, 222)',  // Blue
+            'rgb(35, 150, 35)',   // Green
+            'rgb(190, 95, 30)',   // Orange
+            'rgb(205, 80, 205)',  // Purple
+        ];
 
-      const GRAVITY_MIN = -0.5;
-      const GRAVITY_MAX = 3;
-      const GRAVITY_STEP = 0.01;
-      const GRAVITY_DEFAULT = 1;
-      const ROTATION_MIN = -0.2;
-      const ROTATION_MAX = 0.2;
-      const ROTATION_STEP = 0.001;
-      const ROTATION_DEFAULT = 0.01;
-      const BOUNCE_MIN = 0.1;
-      const BOUNCE_MAX = 0.99;
-      const BOUNCE_STEP = 0.01;
-      const BOUNCE_DEFAULT = 0.92;
-      const MAX_COLLISION_ITERATIONS = 3;
-      const MAX_COLLISION_ITERATIONS_PREDICT = 2;
-      const EPSILON = 1e-7;
-      const NUDGE_DISTANCE = 1e-4;
-      const DRIFT_CORRECTION_THRESHOLD = -1e-4;
-      const INITIAL_BALL_SPAWN_RADIUS = 80;
-      const INITIAL_BALL_VELOCITY_RANGE = 4;
-      // ===== END CONFIGURATION =====
+        const GRAVITY_MIN = -0.5;
+        const GRAVITY_MAX = 3;
+        const GRAVITY_STEP = 0.01;
+        const GRAVITY_DEFAULT = 1;
 
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
+        const ROTATION_MIN = -0.2;
+        const ROTATION_MAX = 0.2;
+        const ROTATION_STEP = 0.001;
+        const ROTATION_DEFAULT = 0.01;
 
-      // Set canvas dimensions from config
-      canvas.width = CANVAS_WIDTH;
-      canvas.height = CANVAS_HEIGHT;
+        const BOUNCE_MIN = 0.1;
+        const BOUNCE_MAX = 0.99;
+        const BOUNCE_STEP = 0.01;
+        const BOUNCE_DEFAULT = 0.92;
 
-      // Set background colors from config
-      document.body.style.backgroundColor = BACKGROUND_COLOR;
-      document.querySelector('.controls').style.backgroundColor =
-        OPTIONS_BACKGROUND_COLOR;
+        const MAX_COLLISION_ITERATIONS = 3;
+        const MAX_COLLISION_ITERATIONS_PREDICT = 2;
+        const EPSILON = 1e-7;
+        const NUDGE_DISTANCE = 1e-4;
+        const DRIFT_CORRECTION_THRESHOLD = -1e-4;
 
-      const W = CANVAS_WIDTH,
-        H = CANVAS_HEIGHT;
-      const CX = W / 2,
-        CY = H / 2;
+        const INITIAL_BALL_SPAWN_RADIUS = 80;
+        const INITIAL_BALL_VELOCITY_RANGE = 4;
 
-      // Controls
-      const gravitySlider = document.getElementById('gravity');
-      const rotationSlider = document.getElementById('rotation');
-      const elasticitySlider = document.getElementById('elasticity');
-      const gravityValue = document.getElementById('gravityValue');
-      const rotationValue = document.getElementById('rotationValue');
-      const elasticityValue = document.getElementById('elasticityValue');
-      const shapeRadios = document.querySelectorAll('input[name="shape"]');
-      const collisionRadios = document.querySelectorAll(
-        'input[name="collisionMode"]'
-      );
+        // ===== END CONFIGURATION =====
 
-      // Set slider attributes from config
-      gravitySlider.min = GRAVITY_MIN;
-      gravitySlider.max = GRAVITY_MAX;
-      gravitySlider.step = GRAVITY_STEP;
-      gravitySlider.value = GRAVITY_DEFAULT;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
 
-      rotationSlider.min = ROTATION_MIN;
-      rotationSlider.max = ROTATION_MAX;
-      rotationSlider.step = ROTATION_STEP;
-      rotationSlider.value = ROTATION_DEFAULT;
+        // Set canvas dimensions from config
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
 
-      elasticitySlider.min = BOUNCE_MIN;
-      elasticitySlider.max = BOUNCE_MAX;
-      elasticitySlider.step = BOUNCE_STEP;
-      elasticitySlider.value = BOUNCE_DEFAULT;
+        // Set background colors from config
+        document.body.style.backgroundColor = BACKGROUND_COLOR;
+        document.querySelector('.controls').style.backgroundColor =
+            OPTIONS_BACKGROUND_COLOR;
 
-      function fmt(x) {
-        const s = parseFloat(x).toFixed(2);
-        return s >= 0 ? `+${s}` : s;
-      }
+        const W = CANVAS_WIDTH,
+            H = CANVAS_HEIGHT;
+        const CX = W / 2,
+            CY = H / 2;
 
-      // Parameters
-      let gravity = parseFloat(gravitySlider.value);
-      let omega = parseFloat(rotationSlider.value);
-      let eRest = parseFloat(elasticitySlider.value);
-      let mode = 'naive';
+        // Controls
+        const gravitySlider = document.getElementById('gravity');
+        const rotationSlider = document.getElementById('rotation');
+        const elasticitySlider = document.getElementById('elasticity');
 
-      let sides = 6;
-      let theta = 0;
+        const gravityValue = document.getElementById('gravityValue');
+        const rotationValue = document.getElementById('rotationValue');
+        const elasticityValue = document.getElementById('elasticityValue');
 
-      // Balls
-      let balls = [];
-      function newBall(index) {
-        const a = Math.random() * Math.PI * 2,
-          d = Math.random() * INITIAL_BALL_SPAWN_RADIUS;
-        return {
-          x: CX + Math.cos(a) * d,
-          y: CY + Math.sin(a) * d,
-          vx: (Math.random() - 0.5) * INITIAL_BALL_VELOCITY_RANGE,
-          vy: (Math.random() - 0.5) * INITIAL_BALL_VELOCITY_RANGE,
-          radius: BALL_RADIUS,
-          color: BALL_COLORS[index % BALL_COLORS.length],
-        };
-      }
-      function resetBalls() {
-        balls = Array.from({ length: BALL_COLORS.length }, (_, i) =>
-          newBall(i)
+        const shapeRadios = document.querySelectorAll('input[name="shape"]');
+        const collisionRadios = document.querySelectorAll(
+            'input[name="collisionMode"]'
         );
-      }
-      resetBalls();
 
-      // UI
-      gravityValue.textContent = fmt(gravity);
-      rotationValue.textContent = fmt(omega);
-      elasticityValue.textContent = fmt(eRest);
-      gravitySlider.addEventListener('input', () => {
-        gravity = parseFloat(gravitySlider.value);
-        gravityValue.textContent = fmt(gravity);
-      });
-      rotationSlider.addEventListener('input', () => {
-        omega = parseFloat(rotationSlider.value);
-        rotationValue.textContent = fmt(omega);
-      });
-      elasticitySlider.addEventListener('input', () => {
-        eRest = parseFloat(elasticitySlider.value);
-        elasticityValue.textContent = fmt(eRest);
-      });
-      shapeRadios.forEach((r) =>
-        r.addEventListener('change', (e) => {
-          sides = parseInt(e.target.value, 10);
-          resetBalls();
-        })
-      );
-      collisionRadios.forEach((r) =>
-        r.addEventListener('change', (e) => {
-          mode = e.target.value;
-        })
-      );
+        // Set slider attributes from config
+        gravitySlider.min = GRAVITY_MIN;
+        gravitySlider.max = GRAVITY_MAX;
+        gravitySlider.step = GRAVITY_STEP;
+        gravitySlider.value = GRAVITY_DEFAULT;
 
-      // Geometry
-      function getVerticesWorld() {
-        const verts = [];
-        if (sides === 4) {
-          const w = POLYGON_RADIUS * RECTANGLE_WIDTH_RATIO,
-            h = POLYGON_RADIUS * RECTANGLE_HEIGHT_RATIO;
-          const corners = [
-            { x: -w / 2, y: -h / 2 },
-            { x: w / 2, y: -h / 2 },
-            { x: w / 2, y: h / 2 },
-            { x: -w / 2, y: h / 2 },
-          ];
-          for (const c of corners) {
-            const rotated = rot(c.x, c.y, theta);
-            verts.push({ x: CX + rotated.x, y: CY + rotated.y });
-          }
-        } else {
-          for (let i = 0; i < sides; i++) {
-            const a = theta + (i * 2 * Math.PI) / sides;
-            verts.push({
-              x: CX + POLYGON_RADIUS * Math.cos(a),
-              y: CY + POLYGON_RADIUS * Math.sin(a),
+        rotationSlider.min = ROTATION_MIN;
+        rotationSlider.max = ROTATION_MAX;
+        rotationSlider.step = ROTATION_STEP;
+        rotationSlider.value = ROTATION_DEFAULT;
+
+        elasticitySlider.min = BOUNCE_MIN;
+        elasticitySlider.max = BOUNCE_MAX;
+        elasticitySlider.step = BOUNCE_STEP;
+        elasticitySlider.value = BOUNCE_DEFAULT;
+
+        // State
+        let gravity = GRAVITY_DEFAULT;
+        let omega = ROTATION_DEFAULT;
+        let eRest = BOUNCE_DEFAULT;
+        let numSides = 6;
+        let mode = 'naive';
+
+        const R = POLYGON_RADIUS;
+        let theta = 0;
+        const balls = [];
+
+        // Polygon vertices
+        function getVerticesLocal() {
+            const verts = [];
+            for (let i = 0; i < numSides; i++) {
+                const angle = (i * 2 * Math.PI) / numSides - Math.PI / 2;
+                verts.push({ x: Math.cos(angle) * R, y: Math.sin(angle) * R });
+            }
+            return verts;
+        }
+
+        function rotatePoint(x, y, angle) {
+            return {
+                x: x * Math.cos(angle) - y * Math.sin(angle),
+                y: x * Math.sin(angle) + y * Math.cos(angle),
+            };
+        }
+
+        function getVerticesWorld() {
+            const local = getVerticesLocal();
+            return local.map((v) => {
+                const rot = rotatePoint(v.x, v.y, theta);
+                return { x: rot.x + CX, y: rot.y + CY };
             });
-          }
         }
-        return verts;
-      }
-      function drawPolygon(verts) {
-        ctx.beginPath();
-        ctx.moveTo(verts[0].x, verts[0].y);
-        for (let i = 1; i < verts.length; i++)
-          ctx.lineTo(verts[i].x, verts[i].y);
-        ctx.closePath();
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = POLYGON_BORDER_WIDTH;
-        ctx.stroke();
-      }
-      function drawBall(b) {
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-        ctx.fillStyle = b.color;
-        ctx.fill();
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = BALL_BORDER_WIDTH;
-        ctx.stroke();
-      }
 
-      // LinAlg
-      function rot(x, y, a) {
-        const c = Math.cos(a),
-          s = Math.sin(a);
-        return { x: c * x - s * y, y: s * x + c * y };
-      }
-      function worldToLocalPoint(x, y) {
-        const dx = x - CX,
-          dy = y - CY;
-        return rot(dx, dy, -theta);
-      }
-      function localToWorldPoint(x, y) {
-        const p = rot(x, y, theta);
-        return { x: p.x + CX, y: p.y + CY };
-      }
-      function worldToLocalVec(vx, vy) {
-        return rot(vx, vy, -theta);
-      }
-      function localToWorldVec(vx, vy) {
-        return rot(vx, vy, theta);
-      }
-      function dot(ax, ay, bx, by) {
-        return ax * bx + ay * by;
-      }
-
-      // Build edges in LOCAL frame
-      function buildEdgesLocal(vertsWorld) {
-        const verts = vertsWorld.map((p) => worldToLocalPoint(p.x, p.y));
-        // Ensure CCW
-        let area = 0;
-        for (let i = 0; i < verts.length; i++) {
-          const a = verts[i],
-            b = verts[(i + 1) % verts.length];
-          area += a.x * b.y - b.x * a.y;
-        }
-        if (area <= 0) verts.reverse();
-
-        const centroid = { x: 0, y: 0 };
-        for (const v of verts) {
-          centroid.x += v.x;
-          centroid.y += v.y;
-        }
-        centroid.x /= verts.length;
-        centroid.y /= verts.length;
-
-        const edges = [];
-        for (let i = 0; i < verts.length; i++) {
-          const a = verts[i],
-            b = verts[(i + 1) % verts.length];
-          const ex = b.x - a.x,
-            ey = b.y - a.y;
-          const L = Math.hypot(ex, ey);
-          const ehat = { x: ex / L, y: ey / L };
-          // inward normal for CCW
-          let nx = -ehat.y,
-            ny = ehat.x;
-          const mx = (a.x + b.x) / 2,
-            my = (a.y + b.y) / 2;
-          const toC = { x: centroid.x - mx, y: centroid.y - my };
-          if (nx * toC.x + ny * toC.y < 0) {
-            nx = -nx;
-            ny = -ny;
-          }
-          edges.push({ a, b, L, ehat, n: { x: nx, y: ny } });
-        }
-        return { edges, vertsLocal: verts };
-      }
-
-      // Quadratic solve
-      function solveQuadratic(a, b, c) {
-        const D = b * b - 4 * a * c;
-        if (D < 0) return [];
-        const s = Math.sqrt(D);
-        const q = -(b + Math.sign(b || 1) * s) / 2;
-        return [q / a, c / q].sort((u, v) => u - v);
-      }
-
-      // Swept circle TOI in LOCAL frame
-      function sweptTOI_Local(p0, v, R, edges) {
-        let bestT = Infinity,
-          bestN = null;
-
-        // Edge planes offset by R
-        for (const ed of edges) {
-          const nx = ed.n.x,
-            ny = ed.n.y;
-          const denom = dot(nx, ny, v.x, v.y);
-          if (denom >= -EPSILON) continue; // not moving into plane
-
-          const dist0 = R - dot(nx, ny, p0.x - ed.a.x, p0.y - ed.a.y);
-          const t = dist0 / denom; // fraction of displacement v
-          if (t < -EPSILON || t > 1 + EPSILON) continue;
-
-          const qx = p0.x + v.x * t,
-            qy = p0.y + v.y * t;
-          const ex = ed.b.x - ed.a.x,
-            ey = ed.b.y - ed.a.y,
-            L2 = ed.L * ed.L;
-          const u = ((qx - ed.a.x) * ex + (qy - ed.a.y) * ey) / L2;
-          if (u >= -EPSILON && u <= 1 + EPSILON) {
-            if (t < bestT) {
-              bestT = Math.max(0, t);
-              bestN = { x: nx, y: ny };
+        // Init balls
+        function initBalls() {
+            balls.length = 0;
+            for (let i = 0; i < 10; i++) {
+                const angle = (i * 2 * Math.PI) / 10;
+                const dist = Math.random() * INITIAL_BALL_SPAWN_RADIUS;
+                const color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
+                balls.push({
+                    x: CX + Math.cos(angle) * dist,
+                    y: CY + Math.sin(angle) * dist,
+                    vx: (Math.random() - 0.5) * INITIAL_BALL_VELOCITY_RANGE,
+                    vy: (Math.random() - 0.5) * INITIAL_BALL_VELOCITY_RANGE,
+                    radius: BALL_RADIUS,
+                    color: color,
+                });
             }
-          }
         }
 
-        // Vertex discs radius R
-        for (const ed of edges) {
-          for (const c of [ed.a, ed.b]) {
-            const rx = p0.x - c.x,
-              ry = p0.y - c.y;
-            const A = dot(v.x, v.y, v.x, v.y);
-            if (A < EPSILON) continue;
-            const B = 2 * dot(v.x, v.y, rx, ry);
-            const C = dot(rx, ry, rx, ry) - R * R;
-            const roots = solveQuadratic(A, B, C);
-            for (const t of roots) {
-              if (t < -EPSILON || t > 1 + EPSILON) continue;
-              const qx = p0.x + v.x * t,
-                qy = p0.y + v.y * t;
-              let nx = qx - c.x,
-                ny = qy - c.y;
-              const len = Math.hypot(nx, ny);
-              if (len < EPSILON) continue;
-              nx /= len;
-              ny /= len;
-              if (dot(v.x, v.y, nx, ny) >= -EPSILON) continue;
-              if (t < bestT) {
-                bestT = Math.max(0, t);
-                bestN = { x: nx, y: ny };
-              }
+        initBalls();
+
+        // Drawing
+        function drawPolygon(verts) {
+            ctx.beginPath();
+            for (let i = 0; i < verts.length; i++) {
+                if (i === 0) ctx.moveTo(verts[i].x, verts[i].y);
+                else ctx.lineTo(verts[i].x, verts[i].y);
             }
-          }
+            ctx.closePath();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = POLYGON_BORDER_WIDTH;
+            ctx.stroke();
         }
 
-        if (bestT !== Infinity) return { hit: true, t: bestT, n: bestN };
-        return { hit: false };
-      }
-
-      // Continuous integrator (raycast)
-      function integrateRaycastLocal(ball, vertsWorld, dt) {
-        const { edges } = buildEdgesLocal(vertsWorld);
-
-        let pL = worldToLocalPoint(ball.x, ball.y);
-        let vL = worldToLocalVec(ball.vx, ball.vy);
-
-        let remaining = dt;
-
-        for (
-          let i = 0;
-          i < MAX_COLLISION_ITERATIONS && remaining > EPSILON;
-          i++
-        ) {
-          const vStep = { x: vL.x * remaining, y: vL.y * remaining };
-          const toi = sweptTOI_Local(pL, vStep, ball.radius, edges);
-
-          if (!toi.hit) {
-            pL.x += vL.x * remaining;
-            pL.y += vL.y * remaining;
-            remaining = 0;
-            break;
-          }
-
-          pL.x += vL.x * (remaining * toi.t);
-          pL.y += vL.y * (remaining * toi.t);
-
-          const vrn = vL.x * toi.n.x + vL.y * toi.n.y;
-          if (vrn < 0) {
-            const j = (1 + eRest) * vrn;
-            vL.x -= j * toi.n.x;
-            vL.y -= j * toi.n.y;
-          }
-
-          pL.x += toi.n.x * NUDGE_DISTANCE;
-          pL.y += toi.n.y * NUDGE_DISTANCE;
-
-          remaining *= 1 - toi.t;
+        function drawBall(ball) {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = ball.color;
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = BALL_BORDER_WIDTH;
+            ctx.stroke();
         }
 
-        if (remaining > EPSILON) {
-          pL.x += vL.x * remaining;
-          pL.y += vL.y * remaining;
+        // Controls update
+        function updateControls() {
+            gravityValue.textContent = gravity.toFixed(2);
+            rotationValue.textContent = omega.toFixed(3);
+            elasticityValue.textContent = eRest.toFixed(2);
         }
 
-        // drift correction
-        const { edges: edges2 } = buildEdgesLocal(vertsWorld);
-        let worstD = 0,
-          worstN = null;
-        for (const ed of edges2) {
-          const d =
-            (pL.x - ed.a.x) * ed.n.x + (pL.y - ed.a.y) * ed.n.y - ball.radius;
-          if (d < worstD) {
-            worstD = d;
-            worstN = ed.n;
-          }
-        }
-        if (worstD < DRIFT_CORRECTION_THRESHOLD && worstN) {
-          pL.x -= worstD * worstN.x;
-          pL.y -= worstD * worstN.y;
-          const vn = vL.x * worstN.x + vL.y * worstN.y;
-          if (vn < 0) {
-            const j = (1 + eRest) * vn;
-            vL.x -= j * worstN.x;
-            vL.y -= j * worstN.y;
-          }
-        }
+        gravitySlider.addEventListener('input', () => {
+            gravity = parseFloat(gravitySlider.value);
+            updateControls();
+        });
 
-        const pW = localToWorldPoint(pL.x, pL.y);
-        const vW = localToWorldVec(vL.x, vL.y);
-        ball.x = pW.x;
-        ball.y = pW.y;
-        ball.vx = vW.x;
-        ball.vy = vW.y;
-      }
+        rotationSlider.addEventListener('input', () => {
+            omega = parseFloat(rotationSlider.value);
+            updateControls();
+        });
 
-      // Raycast Predict: same as raycast but shift first collision earlier by ~one frame.
-      // If a collision would occur in (dt, 2dt], we execute that first bounce at tEarly = tau - dt now.
-      function integrateRaycastPredictLocal(ball, vertsWorld, dt) {
-        const { edges } = buildEdgesLocal(vertsWorld);
+        elasticitySlider.addEventListener('input', () => {
+            eRest = parseFloat(elasticitySlider.value);
+            updateControls();
+        });
 
-        let pL = worldToLocalPoint(ball.x, ball.y);
-        let vL = worldToLocalVec(ball.vx, ball.vy);
-        const R = ball.radius;
+        shapeRadios.forEach((radio) => {
+            radio.addEventListener('change', () => {
+                numSides = parseInt(radio.value);
+                initBalls();
+            });
+        });
 
-        // Look ahead 2*dt for the first hit (edges + vertices)
-        const vH = { x: vL.x * (2 * dt), y: vL.y * (2 * dt) };
-        const look = sweptTOI_Local(pL, vH, R, edges);
+        collisionRadios.forEach((radio) => {
+            radio.addEventListener('change', () => {
+                mode = radio.value;
+            });
+        });
 
-        // If no hit in next 2 frames, just do normal raycast for this frame.
-        if (!look.hit) {
-          integrateRaycastLocal(ball, vertsWorld, dt);
-          return;
+        updateControls();
+
+        // Raycast integrators
+        function worldToLocalPoint(x, y) {
+            const dx = x - CX,
+                dy = y - CY;
+            const p = rotatePoint(dx, dy, -theta);
+            return { x: p.x, y: p.y };
         }
 
-        // Absolute time to that hit from now
-        const tau = look.t * (2 * dt);
-
-        // If the hit is within this frame, just do normal raycast.
-        if (tau <= dt + EPSILON) {
-          integrateRaycastLocal(ball, vertsWorld, dt);
-          return;
+        function localToWorldPoint(x, y) {
+            const p = rotatePoint(x, y, theta);
+            return { x: p.x + CX, y: p.y + CY };
         }
 
-        // Otherwise, it would hit next frame. Do that bounce one frame early.
-        const tEarly = Math.max(0, tau - dt); // in (0, dt]
-        let remaining = dt;
-
-        // Advance to the early-contact time
-        pL.x += vL.x * tEarly;
-        pL.y += vL.y * tEarly;
-        remaining -= tEarly;
-
-        // Reflect at predicted normal (same local frame this step)
-        const n = look.n;
-        const vrn = vL.x * n.x + vL.y * n.y; // should be < 0
-        if (vrn < 0) {
-          const j = (1 + eRest) * vrn;
-          vL.x -= j * n.x;
-          vL.y -= j * n.y;
+        function worldToLocalVec(vx, vy) {
+            return rotatePoint(vx, vy, -theta);
         }
 
-        // Nudge inside
-        pL.x += n.x * NUDGE_DISTANCE;
-        pL.y += n.y * NUDGE_DISTANCE;
-
-        // After the early bounce, finish remainder using standard raycast loop for accuracy
-        for (
-          let i = 0;
-          i < MAX_COLLISION_ITERATIONS_PREDICT && remaining > EPSILON;
-          i++
-        ) {
-          const vStep = { x: vL.x * remaining, y: vL.y * remaining };
-          const toi = sweptTOI_Local(pL, vStep, R, edges);
-
-          if (!toi.hit) {
-            pL.x += vL.x * remaining;
-            pL.y += vL.y * remaining;
-            remaining = 0;
-            break;
-          }
-
-          pL.x += vL.x * (remaining * toi.t);
-          pL.y += vL.y * (remaining * toi.t);
-
-          const vrn2 = vL.x * toi.n.x + vL.y * toi.n.y;
-          if (vrn2 < 0) {
-            const j2 = (1 + eRest) * vrn2;
-            vL.x -= j2 * toi.n.x;
-            vL.y -= j2 * toi.n.y;
-          }
-
-          pL.x += toi.n.x * NUDGE_DISTANCE;
-          pL.y += toi.n.y * NUDGE_DISTANCE;
-
-          remaining *= 1 - toi.t;
+        function localToWorldVec(vx, vy) {
+            return rotatePoint(vx, vy, theta);
         }
 
-        if (remaining > EPSILON) {
-          pL.x += vL.x * remaining;
-          pL.y += vL.y * remaining;
-        }
-
-        const pW = localToWorldPoint(pL.x, pL.y);
-        const vW = localToWorldVec(vL.x, vL.y);
-        ball.x = pW.x;
-        ball.y = pW.y;
-        ball.vx = vW.x;
-        ball.vy = vW.y;
-      }
-
-      // Naive overlap comparator
-      function naiveEdgeCheck(ball, verts) {
-        for (let i = 0; i < verts.length; i++) {
-          const p1 = verts[i],
-            p2 = verts[(i + 1) % verts.length];
-          const sx = p2.x - p1.x,
-            sy = p2.y - p1.y,
-            sl = Math.hypot(sx, sy);
-          const vx = ball.x - p1.x,
-            vy = ball.y - p1.y,
-            proj = (vx * sx + vy * sy) / sl;
-          let cx, cy;
-          if (proj <= 0) {
-            cx = p1.x;
-            cy = p1.y;
-          } else if (proj >= sl) {
-            cx = p2.x;
-            cy = p2.y;
-          } else {
-            cx = p1.x + (proj * sx) / sl;
-            cy = p1.y + (proj * sy) / sl;
-          }
-          const dx = ball.x - cx,
-            dy = ball.y - cy,
-            dist = Math.hypot(dx, dy);
-          if (dist < ball.radius) {
-            const nx = dx / dist,
-              ny = dy / dist,
-              overlap = ball.radius - dist;
-            ball.x += nx * overlap;
-            ball.y += ny * overlap;
-            const vn = ball.vx * nx + ball.vy * ny;
-            if (vn < 0) {
-              const j = (-1 - eRest) * vn;
-              ball.vx += j * nx;
-              ball.vy += j * ny;
+        // Edges
+        function buildEdgesLocal(vertsWorld) {
+            const vertsLocal = vertsWorld.map((v) => worldToLocalPoint(v.x, v.y));
+            const edges = [];
+            for (let i = 0; i < vertsLocal.length; i++) {
+                const a = vertsLocal[i],
+                    b = vertsLocal[(i + 1) % vertsLocal.length];
+                const dx = b.x - a.x,
+                    dy = b.y - a.y,
+                    len = Math.hypot(dx, dy);
+                const n = { x: -dy / len, y: dx / len };
+                edges.push({ a, b, n });
             }
-          }
-        }
-      }
-
-      // Ray vis
-      function raycastVisual(point, verts) {
-        let inside = false,
-          x = point.x,
-          y = point.y,
-          xs = [];
-        for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) {
-          const xi = verts[i].x,
-            yi = verts[i].y,
-            xj = verts[j].x,
-            yj = verts[j].y;
-          const hit =
-            yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-          if (hit) {
-            inside = !inside;
-            const ix = ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-            xs.push({ x: ix, y });
-          }
-        }
-        return { inside, xs };
-      }
-      function drawRays(b, verts) {
-        const res = raycastVisual({ x: b.x, y: b.y }, verts);
-        ctx.beginPath();
-        ctx.moveTo(b.x, b.y);
-        ctx.lineTo(W, b.y);
-        ctx.strokeStyle = res.inside
-          ? RAYCAST_INSIDE_COLOR
-          : RAYCAST_OUTSIDE_COLOR;
-        ctx.lineWidth = RAYCAST_LINE_WIDTH;
-        ctx.stroke();
-        for (const p of res.xs) {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, RAYCAST_DOT_RADIUS, 0, Math.PI * 2);
-          ctx.fillStyle = res.inside
-            ? RAYCAST_DOT_INSIDE_COLOR
-            : RAYCAST_DOT_OUTSIDE_COLOR;
-          ctx.fill();
-          ctx.strokeStyle = '#000';
-          ctx.lineWidth = RAYCAST_DOT_BORDER_WIDTH;
-          ctx.stroke();
-        }
-        ctx.fillStyle = res.inside
-          ? RAYCAST_TEXT_INSIDE_COLOR
-          : RAYCAST_TEXT_OUTSIDE_COLOR;
-        ctx.font = `${RAYCAST_TEXT_SIZE}px "Courier New",Courier,monospace`;
-        ctx.fillText(`${res.xs.length}`, b.x + 22, b.y - 8);
-      }
-
-      // Animation
-      let last = null;
-      function animate() {
-        ctx.clearRect(0, 0, W, H);
-        const now = performance.now();
-        const dt = Math.min((now - (last || now)) / 16.667, 2); // vs 60Hz
-        last = now;
-
-        theta += omega * dt;
-        const vertsWorld = getVerticesWorld();
-        drawPolygon(vertsWorld);
-
-        for (const b of balls) {
-          // Forces
-          b.vy += gravity * dt;
-
-          if (mode === 'naive') {
-            b.x += b.vx * dt;
-            b.y += b.vy * dt;
-            naiveEdgeCheck(b, vertsWorld);
-          } else if (mode === 'raycast') {
-            integrateRaycastLocal(b, vertsWorld, dt);
-          } else if (mode === 'raycast_predict') {
-            integrateRaycastPredictLocal(b, vertsWorld, dt);
-          }
-
-          // Canvas bounds fallback
-          if (b.x < b.radius) {
-            b.x = b.radius;
-            b.vx = Math.abs(b.vx) * eRest;
-          } else if (b.x > W - b.radius) {
-            b.x = W - b.radius;
-            b.vx = -Math.abs(b.vx) * eRest;
-          }
-          if (b.y < b.radius) {
-            b.y = b.radius;
-            b.vy = Math.abs(b.vy) * eRest;
-          } else if (b.y > H - b.radius) {
-            b.y = H - b.radius;
-            b.vy = -Math.abs(b.vy) * eRest;
-          }
+            return { edges, vertsLocal };
         }
 
-        // Ball-ball
-        for (let i = 0; i < balls.length; i++) {
-          for (let j = i + 1; j < balls.length; j++) {
-            const a = balls[i],
-              b = balls[j];
-            const dx = b.x - a.x,
-              dy = b.y - a.y,
-              dist = Math.hypot(dx, dy),
-              min = a.radius + b.radius;
-            if (dist < min) {
-              const nx = dx / dist,
-                ny = dy / dist,
-                overlap = min - dist;
-              a.x -= nx * overlap * 0.5;
-              a.y -= ny * overlap * 0.5;
-              b.x += nx * overlap * 0.5;
-              b.y += ny * overlap * 0.5;
-              const dvx = b.vx - a.vx,
-                dvy = b.vy - a.vy,
-                dvn = dvx * nx + dvy * ny;
-              if (dvn < 0) {
-                const j = dvn * eRest;
-                a.vx += j * nx;
-                a.vy += j * ny;
-                b.vx -= j * nx;
-                b.vy -= j * ny;
-              }
+        function sweptTOI_Local(p, v, r, edges) {
+            let bestT = Infinity,
+                bestN = null;
+            for (const edge of edges) {
+                const d0 = (p.x - edge.a.x) * edge.n.x + (p.y - edge.a.y) * edge.n.y;
+                const dv = v.x * edge.n.x + v.y * edge.n.y;
+                if (Math.abs(dv) < EPSILON) continue;
+                const t = (r - d0) / dv;
+                if (t >= 0 && t <= 1 && t < bestT) {
+                    const hit = { x: p.x + v.x * t, y: p.y + v.y * t };
+                    const ab = { x: edge.b.x - edge.a.x, y: edge.b.y - edge.a.y };
+                    const ah = { x: hit.x - edge.a.x, y: hit.y - edge.a.y };
+                    const proj = (ah.x * ab.x + ah.y * ab.y) / (ab.x * ab.x + ab.y * ab.y);
+                    if (proj >= 0 && proj <= 1) {
+                        bestT = t;
+                        bestN = edge.n;
+                    }
+                }
             }
-          }
+            for (const vert of edges.map((e) => e.a)) {
+                const dx = p.x - vert.x,
+                    dy = p.y - vert.y;
+                const a = v.x * v.x + v.y * v.y;
+                const b = 2 * (dx * v.x + dy * v.y);
+                const c = dx * dx + dy * dy - r * r;
+                const disc = b * b - 4 * a * c;
+                if (disc >= 0 && Math.abs(a) > EPSILON) {
+                    const sqrtDisc = Math.sqrt(disc);
+                    const t = (-b - sqrtDisc) / (2 * a);
+                    if (t >= 0 && t <= 1 && t < bestT) {
+                        const hit = { x: p.x + v.x * t, y: p.y + v.y * t };
+                        const nx = (hit.x - vert.x) / r,
+                            ny = (hit.y - vert.y) / r;
+                        bestT = Math.max(0, t);
+                        bestN = { x: nx, y: ny };
+                    }
+                }
+            }
+            if (bestT !== Infinity) return { hit: true, t: bestT, n: bestN };
+            return { hit: false };
         }
 
-        for (const b of balls) drawBall(b);
-        if (mode === 'raycast' || mode === 'raycast_predict')
-          for (const b of balls) drawRays(b, vertsWorld);
+        // Continuous integrator (raycast)
+        function integrateRaycastLocal(ball, vertsWorld, dt) {
+            const { edges } = buildEdgesLocal(vertsWorld);
+            let pL = worldToLocalPoint(ball.x, ball.y);
+            let vL = worldToLocalVec(ball.vx, ball.vy);
+            let remaining = dt;
+            for (
+                let i = 0;
+                i < MAX_COLLISION_ITERATIONS && remaining > EPSILON;
+                i++
+            ) {
+                const vStep = { x: vL.x * remaining, y: vL.y * remaining };
+                const toi = sweptTOI_Local(pL, vStep, ball.radius, edges);
+                if (!toi.hit) {
+                    pL.x += vL.x * remaining;
+                    pL.y += vL.y * remaining;
+                    remaining = 0;
+                    break;
+                }
+                pL.x += vL.x * (remaining * toi.t);
+                pL.y += vL.y * (remaining * toi.t);
+                const vrn = vL.x * toi.n.x + vL.y * toi.n.y;
+                if (vrn < 0) {
+                    const j = (1 + eRest) * vrn;
+                    vL.x -= j * toi.n.x;
+                    vL.y -= j * toi.n.y;
+                }
+                pL.x += toi.n.x * NUDGE_DISTANCE;
+                pL.y += toi.n.y * NUDGE_DISTANCE;
+                remaining *= 1 - toi.t;
+            }
+            if (remaining > EPSILON) {
+                pL.x += vL.x * remaining;
+                pL.y += vL.y * remaining;
+            }
+            // drift correction
+            const { edges: edges2 } = buildEdgesLocal(vertsWorld);
+            let worstD = 0,
+                worstN = null;
+            for (const ed of edges2) {
+                const d =
+                    (pL.x - ed.a.x) * ed.n.x + (pL.y - ed.a.y) * ed.n.y - ball.radius;
+                if (d < worstD) {
+                    worstD = d;
+                    worstN = ed.n;
+                }
+            }
+            if (worstD < DRIFT_CORRECTION_THRESHOLD && worstN) {
+                pL.x -= worstD * worstN.x;
+                pL.y -= worstD * worstN.y;
+                const vn = vL.x * worstN.x + vL.y * worstN.y;
+                if (vn < 0) {
+                    const j = (1 + eRest) * vn;
+                    vL.x -= j * worstN.x;
+                    vL.y -= j * worstN.y;
+                }
+            }
+            const pW = localToWorldPoint(pL.x, pL.y);
+            const vW = localToWorldVec(vL.x, vL.y);
+            ball.x = pW.x;
+            ball.y = pW.y;
+            ball.vx = vW.x;
+            ball.vy = vW.y;
+        }
 
-        requestAnimationFrame(animate);
-      }
-      animate();
+        // Raycast Predict: same as raycast but shift first collision earlier by ~one frame.
+        // If a collision would occur in (dt, 2dt], we execute that first bounce at tEarly = tau - dt now.
+        function integrateRaycastPredictLocal(ball, vertsWorld, dt) {
+            const { edges } = buildEdgesLocal(vertsWorld);
+            let pL = worldToLocalPoint(ball.x, ball.y);
+            let vL = worldToLocalVec(ball.vx, ball.vy);
+            const R = ball.radius;
+
+            // Look ahead 2*dt for the first hit (edges + vertices)
+            const vH = { x: vL.x * (2 * dt), y: vL.y * (2 * dt) };
+            const look = sweptTOI_Local(pL, vH, R, edges);
+
+            // If no hit in next 2 frames, just do normal raycast for this frame.
+            if (!look.hit) {
+                integrateRaycastLocal(ball, vertsWorld, dt);
+                return;
+            }
+
+            // Absolute time to that hit from now
+            const tau = look.t * (2 * dt);
+
+            // If the hit is within this frame, just do normal raycast.
+            if (tau <= dt + EPSILON) {
+                integrateRaycastLocal(ball, vertsWorld, dt);
+                return;
+            }
+
+            // Otherwise, it would hit next frame. Do that bounce one frame early.
+            const tEarly = Math.max(0, tau - dt); // in (0, dt]
+            let remaining = dt;
+
+            // Advance to the early-contact time
+            pL.x += vL.x * tEarly;
+            pL.y += vL.y * tEarly;
+            remaining -= tEarly;
+
+            // Reflect at predicted normal (same local frame this step)
+            const n = look.n;
+            const vrn = vL.x * n.x + vL.y * n.y; // should be < 0
+            if (vrn < 0) {
+                const j = (1 + eRest) * vrn;
+                vL.x -= j * n.x;
+                vL.y -= j * n.y;
+            }
+
+            // Nudge inside
+            pL.x += n.x * NUDGE_DISTANCE;
+            pL.y += n.y * NUDGE_DISTANCE;
+
+            // After the early bounce, finish remainder using standard raycast loop for accuracy
+            for (
+                let i = 0;
+                i < MAX_COLLISION_ITERATIONS_PREDICT && remaining > EPSILON;
+                i++
+            ) {
+                const vStep = { x: vL.x * remaining, y: vL.y * remaining };
+                const toi = sweptTOI_Local(pL, vStep, R, edges);
+                if (!toi.hit) {
+                    pL.x += vL.x * remaining;
+                    pL.y += vL.y * remaining;
+                    remaining = 0;
+                    break;
+                }
+                pL.x += vL.x * (remaining * toi.t);
+                pL.y += vL.y * (remaining * toi.t);
+                const vrn2 = vL.x * toi.n.x + vL.y * toi.n.y;
+                if (vrn2 < 0) {
+                    const j2 = (1 + eRest) * vrn2;
+                    vL.x -= j2 * toi.n.x;
+                    vL.y -= j2 * toi.n.y;
+                }
+                pL.x += toi.n.x * NUDGE_DISTANCE;
+                pL.y += toi.n.y * NUDGE_DISTANCE;
+                remaining *= 1 - toi.t;
+            }
+            if (remaining > EPSILON) {
+                pL.x += vL.x * remaining;
+                pL.y += vL.y * remaining;
+            }
+
+            const pW = localToWorldPoint(pL.x, pL.y);
+            const vW = localToWorldVec(vL.x, vL.y);
+            ball.x = pW.x;
+            ball.y = pW.y;
+            ball.vx = vW.x;
+            ball.vy = vW.y;
+        }
+
+        // Naive overlap comparator
+        function naiveEdgeCheck(ball, verts) {
+            for (let i = 0; i < verts.length; i++) {
+                const p1 = verts[i],
+                    p2 = verts[(i + 1) % verts.length];
+                const sx = p2.x - p1.x,
+                    sy = p2.y - p1.y,
+                    sl = Math.hypot(sx, sy);
+                const vx = ball.x - p1.x,
+                    vy = ball.y - p1.y,
+                    proj = (vx * sx + vy * sy) / sl;
+                let cx, cy;
+                if (proj <= 0) {
+                    cx = p1.x;
+                    cy = p1.y;
+                } else if (proj >= sl) {
+                    cx = p2.x;
+                    cy = p2.y;
+                } else {
+                    cx = p1.x + (proj * sx) / sl;
+                    cy = p1.y + (proj * sy) / sl;
+                }
+                const dx = ball.x - cx,
+                    dy = ball.y - cy,
+                    dist = Math.hypot(dx, dy);
+                if (dist < ball.radius) {
+                    const nx = dx / dist,
+                        ny = dy / dist,
+                        overlap = ball.radius - dist;
+                    ball.x += nx * overlap;
+                    ball.y += ny * overlap;
+                    const vn = ball.vx * nx + ball.vy * ny;
+                    if (vn < 0) {
+                        const j = (-1 - eRest) * vn;
+                        ball.vx += j * nx;
+                        ball.vy += j * ny;
+                    }
+                }
+            }
+        }
+
+        // Ray vis
+        function raycastVisual(point, verts) {
+            let inside = false,
+                x = point.x,
+                y = point.y,
+                xs = [];
+            for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) {
+                const xi = verts[i].x,
+                    yi = verts[i].y,
+                    xj = verts[j].x,
+                    yj = verts[j].y;
+                const hit =
+                    yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+                if (hit) {
+                    inside = !inside;
+                    const ix = ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+                    xs.push({ x: ix, y });
+                }
+            }
+            return { inside, xs };
+        }
+
+        function drawRays(b, verts) {
+            const res = raycastVisual({ x: b.x, y: b.y }, verts);
+            ctx.beginPath();
+            ctx.moveTo(b.x, b.y);
+            ctx.lineTo(W, b.y);
+            ctx.strokeStyle = res.inside
+                ? RAYCAST_INSIDE_COLOR
+                : RAYCAST_OUTSIDE_COLOR;
+            ctx.lineWidth = RAYCAST_LINE_WIDTH;
+            ctx.stroke();
+
+            for (const p of res.xs) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, RAYCAST_DOT_RADIUS, 0, Math.PI * 2);
+                ctx.fillStyle = res.inside
+                    ? RAYCAST_DOT_INSIDE_COLOR
+                    : RAYCAST_DOT_OUTSIDE_COLOR;
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = RAYCAST_DOT_BORDER_WIDTH;
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = res.inside
+                ? RAYCAST_TEXT_INSIDE_COLOR
+                : RAYCAST_TEXT_OUTSIDE_COLOR;
+            ctx.font = `${RAYCAST_TEXT_SIZE}px "Courier New",Courier,monospace`;
+            ctx.fillText(`${res.xs.length}`, b.x + 22, b.y - 8);
+        }
+
+        // Animation
+        let last = null;
+        function animate() {
+            ctx.clearRect(0, 0, W, H);
+            const now = performance.now();
+            const dt = Math.min((now - (last || now)) / 16.667, 2); // vs 60Hz
+            last = now;
+
+            theta += omega * dt;
+            const vertsWorld = getVerticesWorld();
+
+            drawPolygon(vertsWorld);
+
+            for (const b of balls) {
+                // Forces
+                b.vy += gravity * dt;
+
+                if (mode === 'naive') {
+                    b.x += b.vx * dt;
+                    b.y += b.vy * dt;
+                    naiveEdgeCheck(b, vertsWorld);
+                } else if (mode === 'raycast') {
+                    integrateRaycastLocal(b, vertsWorld, dt);
+                } else if (mode === 'raycast_predict') {
+                    integrateRaycastPredictLocal(b, vertsWorld, dt);
+                }
+
+                // Canvas bounds fallback
+                if (b.x < b.radius) {
+                    b.x = b.radius;
+                    b.vx = Math.abs(b.vx) * eRest;
+                } else if (b.x > W - b.radius) {
+                    b.x = W - b.radius;
+                    b.vx = -Math.abs(b.vx) * eRest;
+                }
+                if (b.y < b.radius) {
+                    b.y = b.radius;
+                    b.vy = Math.abs(b.vy) * eRest;
+                } else if (b.y > H - b.radius) {
+                    b.y = H - b.radius;
+                    b.vy = -Math.abs(b.vy) * eRest;
+                }
+            }
+
+            // Ball-ball
+            for (let i = 0; i < balls.length; i++) {
+                for (let j = i + 1; j < balls.length; j++) {
+                    const a = balls[i],
+                        b = balls[j];
+                    const dx = b.x - a.x,
+                        dy = b.y - a.y,
+                        dist = Math.hypot(dx, dy),
+                        min = a.radius + b.radius;
+                    if (dist < min) {
+                        const nx = dx / dist,
+                            ny = dy / dist,
+                            overlap = min - dist;
+                        a.x -= nx * overlap * 0.5;
+                        a.y -= ny * overlap * 0.5;
+                        b.x += nx * overlap * 0.5;
+                        b.y += ny * overlap * 0.5;
+                        const dvx = b.vx - a.vx,
+                            dvy = b.vy - a.vy,
+                            dvn = dvx * nx + dvy * ny;
+                        if (dvn < 0) {
+                            const j = dvn * eRest;
+                            a.vx += j * nx;
+                            a.vy += j * ny;
+                            b.vx -= j * nx;
+                            b.vy -= j * ny;
+                        }
+                    }
+                }
+            }
+
+            for (const b of balls) drawBall(b);
+            if (mode === 'raycast' || mode === 'raycast_predict')
+                for (const b of balls) drawRays(b, vertsWorld);
+
+            requestAnimationFrame(animate);
+        }
+        animate();
     </script>
-  </body>
+</body>
 </html>

@@ -227,6 +227,10 @@
                     <input type="radio" name="shape" value="4" />
                     RECT
                 </label>
+                <label>
+                    <input type="radio" name="shape" value="STAR" />
+                    STAR
+                </label>
             </div>
             <div class="slider-container">
                 <label for="gravity">GRAVITY:</label>
@@ -252,8 +256,10 @@
         const CANVAS_HEIGHT = 600;
         const POLYGON_RADIUS = 220;
         const POLYGON_BORDER_WIDTH = 4;
-        const RECTANGLE_WIDTH_RATIO = 2.2;
-        const RECTANGLE_HEIGHT_RATIO = 0.6;
+        const RECTANGLE_ASPECT_RATIO = 3.67; // width:height ratio
+        const RECTANGLE_HEIGHT_SCALE = 0.6; // height scale relative to POLYGON_RADIUS
+        const STAR_OUTER_RADIUS_RATIO = 1.0; // outer points relative to POLYGON_RADIUS
+        const STAR_INNER_RADIUS_RATIO = 0.4; // inner points (concave angles) relative to POLYGON_RADIUS
         const BALL_RADIUS = 16;
         const BALL_BORDER_WIDTH = 2;
         const RAYCAST_LINE_WIDTH = 2;
@@ -271,13 +277,23 @@
 
         // Muted, near-equal perceived brightness (Rec.709 luma ≈115)
         // Earthy, muted primaries/secondaries with matched perceived brightness (~115 Rec.709)
+        // const BALL_COLORS = [
+        //     'rgb(210, 90, 60)',   // Red
+        //     'rgb(152, 114, 18)',  // Yellow
+        //     'rgb(42, 128, 222)',  // Blue
+        //     'rgb(35, 150, 35)',   // Green
+        //     'rgb(190, 95, 30)',   // Orange
+        //     'rgb(205, 80, 205)',  // Purple
+        // ];
+
+        // pure bright colors
         const BALL_COLORS = [
-            'rgb(210, 90, 60)',   // Red
-            'rgb(152, 114, 18)',  // Yellow
-            'rgb(42, 128, 222)',  // Blue
-            'rgb(35, 150, 35)',   // Green
-            'rgb(190, 95, 30)',   // Orange
-            'rgb(205, 80, 205)',  // Purple
+            'rgb(255, 0, 0)',     // Red
+            'rgb(255, 255, 0)',   // Yellow
+            'rgb(0, 0, 255)',     // Blue
+            'rgb(0, 255, 0)',     // Green
+            'rgb(255, 165, 0)',   // Orange
+            'rgb(128, 0, 128)',   // Purple
         ];
 
         const GRAVITY_MIN = -0.5;
@@ -357,7 +373,7 @@
         let gravity = GRAVITY_DEFAULT;
         let omega = ROTATION_DEFAULT;
         let eRest = BOUNCE_DEFAULT;
-        let numSides = 6;
+        let shapeType = '6'; // can be '3', '4', '6', or 'STAR'
         let mode = 'naive';
 
         const R = POLYGON_RADIUS;
@@ -367,9 +383,32 @@
         // Polygon vertices
         function getVerticesLocal() {
             const verts = [];
-            for (let i = 0; i < numSides; i++) {
-                const angle = (i * 2 * Math.PI) / numSides - Math.PI / 2;
-                verts.push({ x: Math.cos(angle) * R, y: Math.sin(angle) * R });
+
+            if (shapeType === 'STAR') {
+                // 5-pointed star (concave polygon)
+                const outerR = R * STAR_OUTER_RADIUS_RATIO;
+                const innerR = R * STAR_INNER_RADIUS_RATIO;
+                const numPoints = 5;
+                for (let i = 0; i < numPoints * 2; i++) {
+                    const angle = (i * Math.PI) / numPoints - Math.PI / 2;
+                    const radius = i % 2 === 0 ? outerR : innerR;
+                    verts.push({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
+                }
+            } else if (shapeType === '4') {
+                // Rectangle with aspect ratio
+                const halfHeight = R * RECTANGLE_HEIGHT_SCALE;
+                const halfWidth = halfHeight * RECTANGLE_ASPECT_RATIO;
+                verts.push({ x: halfWidth, y: -halfHeight });   // top-right
+                verts.push({ x: halfWidth, y: halfHeight });    // bottom-right
+                verts.push({ x: -halfWidth, y: halfHeight });   // bottom-left
+                verts.push({ x: -halfWidth, y: -halfHeight });  // top-left
+            } else {
+                // Regular polygon (triangle, hexagon, etc.)
+                const numSides = parseInt(shapeType);
+                for (let i = 0; i < numSides; i++) {
+                    const angle = (i * 2 * Math.PI) / numSides - Math.PI / 2;
+                    verts.push({ x: Math.cos(angle) * R, y: Math.sin(angle) * R });
+                }
             }
             return verts;
         }
@@ -392,10 +431,11 @@
         // Init balls
         function initBalls() {
             balls.length = 0;
-            for (let i = 0; i < 10; i++) {
-                const angle = (i * 2 * Math.PI) / 10;
+            const numBalls = BALL_COLORS.length;
+            for (let i = 0; i < numBalls; i++) {
+                const angle = (i * 2 * Math.PI) / numBalls;
                 const dist = Math.random() * INITIAL_BALL_SPAWN_RADIUS;
-                const color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
+                const color = BALL_COLORS[i];
                 balls.push({
                     x: CX + Math.cos(angle) * dist,
                     y: CY + Math.sin(angle) * dist,
@@ -456,7 +496,7 @@
 
         shapeRadios.forEach((radio) => {
             radio.addEventListener('change', () => {
-                numSides = parseInt(radio.value);
+                shapeType = radio.value;
                 initBalls();
             });
         });

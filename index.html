@@ -208,10 +208,6 @@
                     <input type="radio" name="collisionMode" value="raycast" />
                     RAYCAST
                 </label>
-                <label>
-                    <input type="radio" name="collisionMode" value="raycast_predict" />
-                    RC_PRE
-                </label>
             </div>
             <div class="shape-selector">
                 <strong>SHAPE:</strong>
@@ -588,8 +584,8 @@
             return { hit: false };
         }
 
-        // Continuous integrator (raycast)
-        function integrateRaycastLocal(ball, vertsWorld, dt) {
+        // Continuous integrator (raycast) - basic version used as fallback
+        function integrateRaycastLocalBasic(ball, vertsWorld, dt) {
             const { edges } = buildEdgesLocal(vertsWorld);
             let pL = worldToLocalPoint(ball.x, ball.y);
             let vL = worldToLocalVec(ball.vx, ball.vy);
@@ -653,9 +649,9 @@
             ball.vy = vW.y;
         }
 
-        // Raycast Predict: same as raycast but shift first collision earlier by ~one frame.
+        // Raycast: checks if the next position would be outside the shape (predictive)
         // If a collision would occur in (dt, 2dt], we execute that first bounce at tEarly = tau - dt now.
-        function integrateRaycastPredictLocal(ball, vertsWorld, dt) {
+        function integrateRaycastLocal(ball, vertsWorld, dt) {
             const { edges } = buildEdgesLocal(vertsWorld);
             let pL = worldToLocalPoint(ball.x, ball.y);
             let vL = worldToLocalVec(ball.vx, ball.vy);
@@ -667,7 +663,7 @@
 
             // If no hit in next 2 frames, just do normal raycast for this frame.
             if (!look.hit) {
-                integrateRaycastLocal(ball, vertsWorld, dt);
+                integrateRaycastLocalBasic(ball, vertsWorld, dt);
                 return;
             }
 
@@ -676,7 +672,7 @@
 
             // If the hit is within this frame, just do normal raycast.
             if (tau <= dt + EPSILON) {
-                integrateRaycastLocal(ball, vertsWorld, dt);
+                integrateRaycastLocalBasic(ball, vertsWorld, dt);
                 return;
             }
 
@@ -857,8 +853,6 @@
                     naiveEdgeCheck(b, vertsWorld);
                 } else if (mode === 'raycast') {
                     integrateRaycastLocal(b, vertsWorld, dt);
-                } else if (mode === 'raycast_predict') {
-                    integrateRaycastPredictLocal(b, vertsWorld, dt);
                 }
 
                 // Canvas bounds fallback
@@ -910,7 +904,7 @@
             }
 
             for (const b of balls) drawBall(b);
-            if (mode === 'raycast' || mode === 'raycast_predict')
+            if (mode === 'raycast')
                 for (const b of balls) drawRays(b, vertsWorld);
 
             requestAnimationFrame(animate);

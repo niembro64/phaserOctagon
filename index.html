@@ -407,21 +407,25 @@
                 verts.push({ x: -halfWidth, y: halfHeight });   // bottom-left
                 verts.push({ x: -halfWidth, y: -halfHeight });  // top-left
             } else if (shapeType === 'U') {
-                // U-shape (notched rectangle)
+                // Double-notched shape (notches on left and right sides)
                 const halfWidth = R * U_SHAPE_WIDTH_RATIO;
                 const halfHeight = R * U_SHAPE_HEIGHT_RATIO;
-                const notchWidth = halfWidth * U_SHAPE_NOTCH_WIDTH_RATIO;
-                const notchDepth = halfHeight * U_SHAPE_NOTCH_DEPTH_RATIO;
+                const notchHeight = halfHeight * U_SHAPE_NOTCH_WIDTH_RATIO;
+                const notchDepth = halfWidth * U_SHAPE_NOTCH_DEPTH_RATIO;
 
                 // Start from bottom-left, go counter-clockwise
-                verts.push({ x: -halfWidth, y: halfHeight });        // bottom-left
-                verts.push({ x: -halfWidth, y: -halfHeight });       // outer top-left
-                verts.push({ x: -notchWidth, y: -halfHeight });      // inner top-left (notch start)
-                verts.push({ x: -notchWidth, y: -halfHeight + notchDepth }); // inner bottom-left (notch bottom)
-                verts.push({ x: notchWidth, y: -halfHeight + notchDepth });  // inner bottom-right (notch bottom)
-                verts.push({ x: notchWidth, y: -halfHeight });       // inner top-right (notch end)
-                verts.push({ x: halfWidth, y: -halfHeight });        // outer top-right
-                verts.push({ x: halfWidth, y: halfHeight });         // bottom-right
+                verts.push({ x: -halfWidth, y: halfHeight });                    // bottom-left corner
+                verts.push({ x: -halfWidth, y: notchHeight });                   // left notch top
+                verts.push({ x: -halfWidth + notchDepth, y: notchHeight });      // left notch inner top
+                verts.push({ x: -halfWidth + notchDepth, y: -notchHeight });     // left notch inner bottom
+                verts.push({ x: -halfWidth, y: -notchHeight });                  // left notch bottom
+                verts.push({ x: -halfWidth, y: -halfHeight });                   // top-left corner
+                verts.push({ x: halfWidth, y: -halfHeight });                    // top-right corner
+                verts.push({ x: halfWidth, y: -notchHeight });                   // right notch top
+                verts.push({ x: halfWidth - notchDepth, y: -notchHeight });      // right notch inner top
+                verts.push({ x: halfWidth - notchDepth, y: notchHeight });       // right notch inner bottom
+                verts.push({ x: halfWidth, y: notchHeight });                    // right notch bottom
+                verts.push({ x: halfWidth, y: halfHeight });                     // bottom-right corner
             } else {
                 // Regular polygon (triangle, hexagon, etc.)
                 const numSides = parseInt(shapeType);

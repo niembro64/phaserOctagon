@@ -227,6 +227,10 @@
                     <input type="radio" name="shape" value="STAR" />
                     STAR
                 </label>
+                <label>
+                    <input type="radio" name="shape" value="U" />
+                    U-SHAPE
+                </label>
             </div>
             <div class="slider-container">
                 <label for="gravity">GRAVITY:</label>
@@ -256,6 +260,10 @@
         const RECTANGLE_HEIGHT_SCALE = 0.6; // height scale relative to POLYGON_RADIUS
         const STAR_OUTER_RADIUS_RATIO = 1.0; // outer points relative to POLYGON_RADIUS
         const STAR_INNER_RADIUS_RATIO = 0.4; // inner points (concave angles) relative to POLYGON_RADIUS
+        const U_SHAPE_WIDTH_RATIO = 0.6; // overall width relative to POLYGON_RADIUS
+        const U_SHAPE_HEIGHT_RATIO = 1.2; // overall height relative to POLYGON_RADIUS (taller)
+        const U_SHAPE_NOTCH_WIDTH_RATIO = 0.4; // notch width relative to overall width
+        const U_SHAPE_NOTCH_DEPTH_RATIO = 0.65; // notch depth relative to overall height (much deeper)
         const BALL_RADIUS = 16;
         const BALL_BORDER_WIDTH = 2;
         const RAYCAST_LINE_WIDTH = 2;
@@ -398,6 +406,22 @@
                 verts.push({ x: halfWidth, y: halfHeight });    // bottom-right
                 verts.push({ x: -halfWidth, y: halfHeight });   // bottom-left
                 verts.push({ x: -halfWidth, y: -halfHeight });  // top-left
+            } else if (shapeType === 'U') {
+                // U-shape (notched rectangle)
+                const halfWidth = R * U_SHAPE_WIDTH_RATIO;
+                const halfHeight = R * U_SHAPE_HEIGHT_RATIO;
+                const notchWidth = halfWidth * U_SHAPE_NOTCH_WIDTH_RATIO;
+                const notchDepth = halfHeight * U_SHAPE_NOTCH_DEPTH_RATIO;
+
+                // Start from bottom-left, go counter-clockwise
+                verts.push({ x: -halfWidth, y: halfHeight });        // bottom-left
+                verts.push({ x: -halfWidth, y: -halfHeight });       // outer top-left
+                verts.push({ x: -notchWidth, y: -halfHeight });      // inner top-left (notch start)
+                verts.push({ x: -notchWidth, y: -halfHeight + notchDepth }); // inner bottom-left (notch bottom)
+                verts.push({ x: notchWidth, y: -halfHeight + notchDepth });  // inner bottom-right (notch bottom)
+                verts.push({ x: notchWidth, y: -halfHeight });       // inner top-right (notch end)
+                verts.push({ x: halfWidth, y: -halfHeight });        // outer top-right
+                verts.push({ x: halfWidth, y: halfHeight });         // bottom-right
             } else {
                 // Regular polygon (triangle, hexagon, etc.)
                 const numSides = parseInt(shapeType);

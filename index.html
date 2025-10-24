@@ -542,105 +542,223 @@
             return { edges, vertsLocal };
         }
 
-        function sweptTOI_Local(p, v, r, edges) {
-            let bestT = Infinity,
-                bestN = null;
+        // Point-in-polygon test (ray casting algorithm) - local coords
+        function isPointInPolygonLocal(px, py, edges) {
+            let inside = false;
             for (const edge of edges) {
-                const d0 = (p.x - edge.a.x) * edge.n.x + (p.y - edge.a.y) * edge.n.y;
-                const dv = v.x * edge.n.x + v.y * edge.n.y;
-                if (Math.abs(dv) < EPSILON) continue;
-                const t = (r - d0) / dv;
-                if (t >= 0 && t <= 1 && t < bestT) {
-                    const hit = { x: p.x + v.x * t, y: p.y + v.y * t };
-                    const ab = { x: edge.b.x - edge.a.x, y: edge.b.y - edge.a.y };
-                    const ah = { x: hit.x - edge.a.x, y: hit.y - edge.a.y };
-                    const proj = (ah.x * ab.x + ah.y * ab.y) / (ab.x * ab.x + ab.y * ab.y);
-                    if (proj >= 0 && proj <= 1) {
+                const x1 = edge.a.x, y1 = edge.a.y;
+                const x2 = edge.b.x, y2 = edge.b.y;
+                const intersect = y1 > py !== y2 > py &&
+                    px < ((x2 - x1) * (py - y1)) / (y2 - y1) + x1;
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        // Find boundary crossing when moving from inside to outside
+        function findBoundaryCrossing(p1, p2, edges) {
+            let bestT = Infinity;
+            let bestEdge = null;
+            let bestHit = null;
+
+            for (const edge of edges) {
+                // Line segment from p1 to p2
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+
+                // Edge from edge.a to edge.b
+                const ex = edge.b.x - edge.a.x;
+                const ey = edge.b.y - edge.a.y;
+
+                // Find intersection of ray (p1 -> p2) with edge line
+                const denom = dx * ey - dy * ex;
+                if (Math.abs(denom) < EPSILON) continue; // Parallel
+
+                const t = ((edge.a.x - p1.x) * ey - (edge.a.y - p1.y) * ex) / denom;
+                const u = ((edge.a.x - p1.x) * dy - (edge.a.y - p1.y) * dx) / denom;
+
+                // Check if intersection is within both segments
+                if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+                    if (t < bestT) {
                         bestT = t;
-                        bestN = edge.n;
+                        bestEdge = edge;
+                        bestHit = {
+                            x: p1.x + t * dx,
+                            y: p1.y + t * dy
+                        };
                     }
                 }
             }
-            for (const vert of edges.map((e) => e.a)) {
-                const dx = p.x - vert.x,
-                    dy = p.y - vert.y;
-                const a = v.x * v.x + v.y * v.y;
-                const b = 2 * (dx * v.x + dy * v.y);
-                const c = dx * dx + dy * dy - r * r;
-                const disc = b * b - 4 * a * c;
-                if (disc >= 0 && Math.abs(a) > EPSILON) {
-                    const sqrtDisc = Math.sqrt(disc);
-                    const t = (-b - sqrtDisc) / (2 * a);
-                    if (t >= 0 && t <= 1 && t < bestT) {
-                        const hit = { x: p.x + v.x * t, y: p.y + v.y * t };
-                        const nx = (hit.x - vert.x) / r,
-                            ny = (hit.y - vert.y) / r;
-                        bestT = Math.max(0, t);
-                        bestN = { x: nx, y: ny };
-                    }
+
+            if (bestEdge) {
+                // Calculate normal at hit point
+                // Normal should point from inside to outside
+                const edgeVec = { x: bestEdge.b.x - bestEdge.a.x, y: bestEdge.b.y - bestEdge.a.y };
+                const len = Math.hypot(edgeVec.x, edgeVec.y);
+                // Perpendicular to edge (could point either way)
+                let nx = -edgeVec.y / len;
+                let ny = edgeVec.x / len;
+
+                // Make sure normal points outward (from p1 toward p2)
+                const movementDir = { x: p2.x - p1.x, y: p2.y - p1.y };
+                const dot = nx * movementDir.x + ny * movementDir.y;
+                if (dot < 0) {
+                    nx = -nx;
+                    ny = -ny;
                 }
+
+                return {
+                    hit: true,
+                    t: bestT,
+                    hitPoint: bestHit,
+                    n: { x: nx, y: ny }
+                };
             }
-            if (bestT !== Infinity) return { hit: true, t: bestT, n: bestN };
+
             return { hit: false };
+        }
+
+        // Find closest point on polygon boundary to a given point
+        function findClosestBoundaryPoint(p, edges) {
+            let closestDist = Infinity;
+            let closestPoint = null;
+            let closestEdge = null;
+
+            for (const edge of edges) {
+                const ex = edge.b.x - edge.a.x;
+                const ey = edge.b.y - edge.a.y;
+                const edgeLengthSq = ex * ex + ey * ey;
+
+                const toBallX = p.x - edge.a.x;
+                const toBallY = p.y - edge.a.y;
+                const t = Math.max(0, Math.min(1, (toBallX * ex + toBallY * ey) / edgeLengthSq));
+
+                const closestX = edge.a.x + t * ex;
+                const closestY = edge.a.y + t * ey;
+                const dist = Math.hypot(p.x - closestX, p.y - closestY);
+
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestPoint = { x: closestX, y: closestY };
+                    closestEdge = edge;
+                }
+            }
+
+            if (closestPoint && closestEdge) {
+                // Calculate normal pointing from closest point toward p (outward)
+                const dx = p.x - closestPoint.x;
+                const dy = p.y - closestPoint.y;
+                const d = Math.hypot(dx, dy);
+
+                let nx, ny;
+                if (d > EPSILON) {
+                    nx = dx / d;
+                    ny = dy / d;
+                } else {
+                    // Use edge perpendicular
+                    const edgeVec = { x: closestEdge.b.x - closestEdge.a.x, y: closestEdge.b.y - closestEdge.a.y };
+                    const len = Math.hypot(edgeVec.x, edgeVec.y);
+                    nx = -edgeVec.y / len;
+                    ny = edgeVec.x / len;
+                }
+
+                return { point: closestPoint, normal: { x: nx, y: ny } };
+            }
+
+            return null;
         }
 
         // Continuous integrator (raycast) - basic version used as fallback
         // Treats ball as a point (radius = 0)
+        // Uses proper point-in-polygon testing to respect polygon boundaries
         function integrateRaycastLocalBasic(ball, vertsWorld, dt) {
             const { edges } = buildEdgesLocal(vertsWorld);
             let pL = worldToLocalPoint(ball.x, ball.y);
             let vL = worldToLocalVec(ball.vx, ball.vy);
             let remaining = dt;
-            for (
-                let i = 0;
-                i < MAX_COLLISION_ITERATIONS && remaining > EPSILON;
-                i++
-            ) {
-                const vStep = { x: vL.x * remaining, y: vL.y * remaining };
-                const toi = sweptTOI_Local(pL, vStep, 0, edges);
-                if (!toi.hit) {
-                    pL.x += vL.x * remaining;
-                    pL.y += vL.y * remaining;
+
+            for (let i = 0; i < MAX_COLLISION_ITERATIONS && remaining > EPSILON; i++) {
+                // Current position
+                const p1 = { x: pL.x, y: pL.y };
+
+                // Where we'd move to
+                const p2 = {
+                    x: pL.x + vL.x * remaining,
+                    y: pL.y + vL.y * remaining
+                };
+
+                // Check if we're transitioning from inside to outside
+                const inside1 = isPointInPolygonLocal(p1.x, p1.y, edges);
+                const inside2 = isPointInPolygonLocal(p2.x, p2.y, edges);
+
+                if (inside1 && !inside2) {
+                    // We're leaving the polygon - find the crossing point
+                    const crossing = findBoundaryCrossing(p1, p2, edges);
+
+                    if (crossing.hit) {
+                        // Move to crossing point
+                        pL.x = crossing.hitPoint.x;
+                        pL.y = crossing.hitPoint.y;
+
+                        // Reflect velocity
+                        const vrn = vL.x * crossing.n.x + vL.y * crossing.n.y;
+                        if (vrn > 0) {
+                            const j = (1 + eRest) * vrn;
+                            vL.x -= j * crossing.n.x;
+                            vL.y -= j * crossing.n.y;
+                        }
+
+                        // Nudge back inside
+                        pL.x -= crossing.n.x * NUDGE_DISTANCE;
+                        pL.y -= crossing.n.y * NUDGE_DISTANCE;
+
+                        remaining *= (1 - crossing.t);
+                    } else {
+                        // Couldn't find crossing, just move
+                        pL.x = p2.x;
+                        pL.y = p2.y;
+                        remaining = 0;
+                    }
+                } else if (!inside1) {
+                    // We're outside - push back inside and continue moving
+                    const closest = findClosestBoundaryPoint(p1, edges);
+                    if (closest) {
+                        // Reflect velocity if moving outward
+                        const vrn = vL.x * closest.normal.x + vL.y * closest.normal.y;
+                        if (vrn > 0) {
+                            const j = (1 + eRest) * vrn;
+                            vL.x -= j * closest.normal.x;
+                            vL.y -= j * closest.normal.y;
+                        }
+
+                        // Place well inside the polygon (not on boundary)
+                        pL.x = closest.point.x - closest.normal.x * (NUDGE_DISTANCE * 10);
+                        pL.y = closest.point.y - closest.normal.y * (NUDGE_DISTANCE * 10);
+
+                        // Now move for the remaining time from this corrected position
+                        const newP2 = {
+                            x: pL.x + vL.x * remaining,
+                            y: pL.y + vL.y * remaining
+                        };
+
+                        // Check if we can move to newP2 without leaving
+                        const newInside = isPointInPolygonLocal(newP2.x, newP2.y, edges);
+                        if (newInside) {
+                            // Safe to move
+                            pL.x = newP2.x;
+                            pL.y = newP2.y;
+                        }
+                        // else stay at corrected position
+                    }
                     remaining = 0;
-                    break;
-                }
-                pL.x += vL.x * (remaining * toi.t);
-                pL.y += vL.y * (remaining * toi.t);
-                const vrn = vL.x * toi.n.x + vL.y * toi.n.y;
-                if (vrn < 0) {
-                    const j = (1 + eRest) * vrn;
-                    vL.x -= j * toi.n.x;
-                    vL.y -= j * toi.n.y;
-                }
-                pL.x += toi.n.x * NUDGE_DISTANCE;
-                pL.y += toi.n.y * NUDGE_DISTANCE;
-                remaining *= 1 - toi.t;
-            }
-            if (remaining > EPSILON) {
-                pL.x += vL.x * remaining;
-                pL.y += vL.y * remaining;
-            }
-            // drift correction (point-based)
-            const { edges: edges2 } = buildEdgesLocal(vertsWorld);
-            let worstD = 0,
-                worstN = null;
-            for (const ed of edges2) {
-                const d = (pL.x - ed.a.x) * ed.n.x + (pL.y - ed.a.y) * ed.n.y;
-                if (d < worstD) {
-                    worstD = d;
-                    worstN = ed.n;
+                } else {
+                    // We're staying inside, just move
+                    pL.x = p2.x;
+                    pL.y = p2.y;
+                    remaining = 0;
                 }
             }
-            if (worstD < DRIFT_CORRECTION_THRESHOLD && worstN) {
-                pL.x -= worstD * worstN.x;
-                pL.y -= worstD * worstN.y;
-                const vn = vL.x * worstN.x + vL.y * worstN.y;
-                if (vn < 0) {
-                    const j = (1 + eRest) * vn;
-                    vL.x -= j * worstN.x;
-                    vL.y -= j * worstN.y;
-                }
-            }
+
             const pW = localToWorldPoint(pL.x, pL.y);
             const vW = localToWorldVec(vL.x, vL.y);
             ball.x = pW.x;
@@ -657,84 +775,90 @@
             let pL = worldToLocalPoint(ball.x, ball.y);
             let vL = worldToLocalVec(ball.vx, ball.vy);
 
-            // Look ahead 2*dt for the first hit (edges only, point-based)
-            const vH = { x: vL.x * (2 * dt), y: vL.y * (2 * dt) };
-            const look = sweptTOI_Local(pL, vH, 0, edges);
+            // Look ahead 2*dt to see if we'd cross boundary
+            const p1 = { x: pL.x, y: pL.y };
+            const p2Ahead = {
+                x: pL.x + vL.x * (2 * dt),
+                y: pL.y + vL.y * (2 * dt)
+            };
 
-            // If no hit in next 2 frames, just do normal raycast for this frame.
-            if (!look.hit) {
-                integrateRaycastLocalBasic(ball, vertsWorld, dt);
-                return;
-            }
+            const inside1 = isPointInPolygonLocal(p1.x, p1.y, edges);
+            const inside2Ahead = isPointInPolygonLocal(p2Ahead.x, p2Ahead.y, edges);
 
-            // Absolute time to that hit from now
-            const tau = look.t * (2 * dt);
+            // Check if we'd cross the boundary in the next 2 frames
+            if (inside1 && !inside2Ahead) {
+                const lookAhead = findBoundaryCrossing(p1, p2Ahead, edges);
 
-            // If the hit is within this frame, just do normal raycast.
-            if (tau <= dt + EPSILON) {
-                integrateRaycastLocalBasic(ball, vertsWorld, dt);
-                return;
-            }
+                if (lookAhead.hit) {
+                    // Calculate absolute time to crossing
+                    const tau = lookAhead.t * (2 * dt);
 
-            // Otherwise, it would hit next frame. Do that bounce one frame early.
-            const tEarly = Math.max(0, tau - dt); // in (0, dt]
-            let remaining = dt;
+                    // If crossing happens in next frame (not this frame), execute early
+                    if (tau > dt + EPSILON) {
+                        // Execute the bounce one frame early
+                        const tEarly = tau - dt;
 
-            // Advance to the early-contact time
-            pL.x += vL.x * tEarly;
-            pL.y += vL.y * tEarly;
-            remaining -= tEarly;
+                        // Advance to early contact time
+                        pL.x += vL.x * tEarly;
+                        pL.y += vL.y * tEarly;
 
-            // Reflect at predicted normal (same local frame this step)
-            const n = look.n;
-            const vrn = vL.x * n.x + vL.y * n.y; // should be < 0
-            if (vrn < 0) {
-                const j = (1 + eRest) * vrn;
-                vL.x -= j * n.x;
-                vL.y -= j * n.y;
-            }
+                        // Reflect velocity
+                        const vrn = vL.x * lookAhead.n.x + vL.y * lookAhead.n.y;
+                        if (vrn > 0) {
+                            const j = (1 + eRest) * vrn;
+                            vL.x -= j * lookAhead.n.x;
+                            vL.y -= j * lookAhead.n.y;
+                        }
 
-            // Nudge inside
-            pL.x += n.x * NUDGE_DISTANCE;
-            pL.y += n.y * NUDGE_DISTANCE;
+                        // Nudge back inside
+                        pL.x -= lookAhead.n.x * NUDGE_DISTANCE;
+                        pL.y -= lookAhead.n.y * NUDGE_DISTANCE;
 
-            // After the early bounce, finish remainder using standard raycast loop for accuracy
-            for (
-                let i = 0;
-                i < MAX_COLLISION_ITERATIONS_PREDICT && remaining > EPSILON;
-                i++
-            ) {
-                const vStep = { x: vL.x * remaining, y: vL.y * remaining };
-                const toi = sweptTOI_Local(pL, vStep, 0, edges);
-                if (!toi.hit) {
-                    pL.x += vL.x * remaining;
-                    pL.y += vL.y * remaining;
-                    remaining = 0;
-                    break;
+                        // Continue with remaining time using basic raycast
+                        const remaining = dt - tEarly;
+                        if (remaining > EPSILON) {
+                            const p2 = {
+                                x: pL.x + vL.x * remaining,
+                                y: pL.y + vL.y * remaining
+                            };
+                            const stillInside = isPointInPolygonLocal(pL.x, pL.y, edges);
+                            const endInside = isPointInPolygonLocal(p2.x, p2.y, edges);
+
+                            if (stillInside && endInside) {
+                                // Just move
+                                pL.x = p2.x;
+                                pL.y = p2.y;
+                            } else if (stillInside && !endInside) {
+                                // Another crossing - shouldn't happen often with early bounce
+                                const secondCross = findBoundaryCrossing({ x: pL.x, y: pL.y }, p2, edges);
+                                if (secondCross.hit) {
+                                    pL.x = secondCross.hitPoint.x;
+                                    pL.y = secondCross.hitPoint.y;
+                                    const vrn2 = vL.x * secondCross.n.x + vL.y * secondCross.n.y;
+                                    if (vrn2 > 0) {
+                                        const j2 = (1 + eRest) * vrn2;
+                                        vL.x -= j2 * secondCross.n.x;
+                                        vL.y -= j2 * secondCross.n.y;
+                                    }
+                                    pL.x -= secondCross.n.x * NUDGE_DISTANCE;
+                                    pL.y -= secondCross.n.y * NUDGE_DISTANCE;
+                                }
+                            }
+                        }
+
+                        const pW = localToWorldPoint(pL.x, pL.y);
+                        const vW = localToWorldVec(vL.x, vL.y);
+                        ball.x = pW.x;
+                        ball.y = pW.y;
+                        ball.vx = vW.x;
+                        ball.vy = vW.y;
+                        return;
+                    }
                 }
-                pL.x += vL.x * (remaining * toi.t);
-                pL.y += vL.y * (remaining * toi.t);
-                const vrn2 = vL.x * toi.n.x + vL.y * toi.n.y;
-                if (vrn2 < 0) {
-                    const j2 = (1 + eRest) * vrn2;
-                    vL.x -= j2 * toi.n.x;
-                    vL.y -= j2 * toi.n.y;
-                }
-                pL.x += toi.n.x * NUDGE_DISTANCE;
-                pL.y += toi.n.y * NUDGE_DISTANCE;
-                remaining *= 1 - toi.t;
-            }
-            if (remaining > EPSILON) {
-                pL.x += vL.x * remaining;
-                pL.y += vL.y * remaining;
             }
 
-            const pW = localToWorldPoint(pL.x, pL.y);
-            const vW = localToWorldVec(vL.x, vL.y);
-            ball.x = pW.x;
-            ball.y = pW.y;
-            ball.vx = vW.x;
-            ball.vy = vW.y;
+            // No early bounce needed, use basic raycast
+            integrateRaycastLocalBasic(ball, vertsWorld, dt);
         }
 
         // Naive overlap comparator (original version with ball radius)
@@ -856,19 +980,38 @@
                 }
 
                 // Canvas bounds fallback
-                if (b.x < b.radius) {
-                    b.x = b.radius;
-                    b.vx = Math.abs(b.vx) * eRest;
-                } else if (b.x > W - b.radius) {
-                    b.x = W - b.radius;
-                    b.vx = -Math.abs(b.vx) * eRest;
-                }
-                if (b.y < b.radius) {
-                    b.y = b.radius;
-                    b.vy = Math.abs(b.vy) * eRest;
-                } else if (b.y > H - b.radius) {
-                    b.y = H - b.radius;
-                    b.vy = -Math.abs(b.vy) * eRest;
+                if (mode === 'naive') {
+                    // NAIVE mode: use ball radius
+                    if (b.x < b.radius) {
+                        b.x = b.radius;
+                        b.vx = Math.abs(b.vx) * eRest;
+                    } else if (b.x > W - b.radius) {
+                        b.x = W - b.radius;
+                        b.vx = -Math.abs(b.vx) * eRest;
+                    }
+                    if (b.y < b.radius) {
+                        b.y = b.radius;
+                        b.vy = Math.abs(b.vy) * eRest;
+                    } else if (b.y > H - b.radius) {
+                        b.y = H - b.radius;
+                        b.vy = -Math.abs(b.vy) * eRest;
+                    }
+                } else {
+                    // RAYCAST mode: point-based (no radius)
+                    if (b.x < 0) {
+                        b.x = 0;
+                        b.vx = Math.abs(b.vx) * eRest;
+                    } else if (b.x > W) {
+                        b.x = W;
+                        b.vx = -Math.abs(b.vx) * eRest;
+                    }
+                    if (b.y < 0) {
+                        b.y = 0;
+                        b.vy = Math.abs(b.vy) * eRest;
+                    } else if (b.y > H) {
+                        b.y = H;
+                        b.vy = -Math.abs(b.vy) * eRest;
+                    }
                 }
             }
 

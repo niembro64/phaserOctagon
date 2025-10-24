@@ -1,1100 +1,1123 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Collision Detection Comparison: Naive vs Raycast</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center; /* Center content horizontally */
-            align-items: flex-start;
-            min-height: 100vh;
-            font-family: 'Courier New', Courier, monospace;
-            background-color: #f0f0f0;
-        }
-        
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center; /* Center content horizontally */
+        align-items: flex-start;
+        min-height: 100vh;
+        font-family: 'Courier New', Courier, monospace;
+        background-color: #f0f0f0;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 640px;
+        padding: 20px 10px;
+        box-sizing: border-box;
+        gap: 15px; /* Space between canvas and controls */
+      }
+
+      canvas {
+        border: 1px solid #333;
+        background: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        max-width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .controls {
+        width: 100%;
+        padding: 15px;
+        border-radius: 5px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.92);
+        -webkit-backdrop-filter: saturate(140%) blur(6px);
+        backdrop-filter: saturate(140%) blur(6px);
+        border: 1px solid #ddd;
+        /* Removed sticky positioning */
+      }
+
+      .slider-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+      }
+
+      .slider-container label {
+        width: 100px;
+        flex-shrink: 0;
+      }
+
+      .slider-container input[type='range'] {
+        flex: 1;
+        min-width: 0;
+        height: 24px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+        outline: none;
+      }
+
+      .slider-container input[type='range']::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 12px;
+        border-radius: 6px;
+        background: #888;
+        border: 2px solid #333;
+        cursor: pointer;
+      }
+
+      .slider-container input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #4a90e2;
+        cursor: pointer;
+        border: 2px solid #333;
+        margin-top: -8px;
+      }
+
+      .slider-container input[type='range']::-moz-range-track {
+        width: 100%;
+        height: 12px;
+        border-radius: 6px;
+        background: #888;
+        border: 2px solid #333;
+        cursor: pointer;
+      }
+
+      .slider-container input[type='range']::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #4a90e2;
+        cursor: pointer;
+        border: 2px solid #333;
+      }
+
+      .slider-container input[type='range']::-ms-track {
+        width: 100%;
+        height: 12px;
+        background: transparent;
+        border-color: transparent;
+        color: transparent;
+        cursor: pointer;
+      }
+
+      .slider-container input[type='range']::-ms-fill-lower {
+        background: #888;
+        border: 2px solid #333;
+        border-radius: 6px;
+      }
+
+      .slider-container input[type='range']::-ms-fill-upper {
+        background: #888;
+        border: 2px solid #333;
+        border-radius: 6px;
+      }
+
+      .slider-container input[type='range']::-ms-thumb {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #4a90e2;
+        cursor: pointer;
+        border: 2px solid #333;
+      }
+
+      .slider-container span {
+        width: 60px;
+        flex-shrink: 0;
+        text-align: right;
+      }
+
+      .shape-selector {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 5px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .shape-selector label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+      }
+
+      button {
+        padding: 8px 16px;
+        cursor: pointer;
+        background: #4caf50;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-family: 'Courier New', Courier, monospace;
+      }
+
+      button:hover {
+        background: #45a049;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 640px) {
         .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            max-width: 640px;
-            padding: 20px 10px;
-            box-sizing: border-box;
-            gap: 15px; /* Space between canvas and controls */
+          padding: 10px 5px;
         }
-        
-        canvas {
-            border: 1px solid #333;
-            background: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            max-width: 100%;
-            height: auto;
-            display: block;
-        }
-        
-        .controls {
-            width: 100%;
-            padding: 15px;
-            border-radius: 5px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            box-sizing: border-box;
-            background: rgba(255, 255, 255, 0.92);
-            -webkit-backdrop-filter: saturate(140%) blur(6px);
-            backdrop-filter: saturate(140%) blur(6px);
-            border: 1px solid #ddd;
-            /* Removed sticky positioning */
-        }
-        
-        .slider-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-        }
-        
-        .slider-container label {
-            width: 100px;
-            flex-shrink: 0;
-        }
-        
-        .slider-container input[type='range'] {
-            flex: 1;
-            min-width: 0;
-            height: 24px;
-            -webkit-appearance: none;
-            appearance: none;
-            background: transparent;
-            outline: none;
-        }
-        
-        .slider-container input[type='range']::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 12px;
-            border-radius: 6px;
-            background: #888;
-            border: 2px solid #333;
-            cursor: pointer;
-        }
-        
-        .slider-container input[type='range']::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #4a90e2;
-            cursor: pointer;
-            border: 2px solid #333;
-            margin-top: -8px;
-        }
-        
-        .slider-container input[type='range']::-moz-range-track {
-            width: 100%;
-            height: 12px;
-            border-radius: 6px;
-            background: #888;
-            border: 2px solid #333;
-            cursor: pointer;
-        }
-        
-        .slider-container input[type='range']::-moz-range-thumb {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #4a90e2;
-            cursor: pointer;
-            border: 2px solid #333;
-        }
-        
-        .slider-container input[type='range']::-ms-track {
-            width: 100%;
-            height: 12px;
-            background: transparent;
-            border-color: transparent;
-            color: transparent;
-            cursor: pointer;
-        }
-        
-        .slider-container input[type='range']::-ms-fill-lower {
-            background: #888;
-            border: 2px solid #333;
-            border-radius: 6px;
-        }
-        
-        .slider-container input[type='range']::-ms-fill-upper {
-            background: #888;
-            border: 2px solid #333;
-            border-radius: 6px;
-        }
-        
-        .slider-container input[type='range']::-ms-thumb {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #4a90e2;
-            cursor: pointer;
-            border: 2px solid #333;
-        }
-        
-        .slider-container span {
-            width: 60px;
-            flex-shrink: 0;
-            text-align: right;
-        }
-        
+
         .shape-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 5px;
-            align-items: center;
-            flex-wrap: wrap;
+          font-size: 14px;
         }
-        
-        .shape-selector label {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            cursor: pointer;
+
+        .slider-container label {
+          width: 80px;
+          font-size: 14px;
         }
-        
-        button {
-            padding: 8px 16px;
-            cursor: pointer;
-            background: #4caf50;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            font-family: 'Courier New', Courier, monospace;
-        }
-        
-        button:hover {
-            background: #45a049;
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 640px) {
-            .container {
-                padding: 10px 5px;
-            }
-            
-            .shape-selector {
-                font-size: 14px;
-            }
-            
-            .slider-container label {
-                width: 80px;
-                font-size: 14px;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <canvas id="canvas"></canvas>
-        <div class="controls">
-            <div class="shape-selector">
-                <strong>COLLISIONS:</strong>
-                <label>
-                    <input type="radio" name="collisionMode" value="naive" checked />
-                    NAIVE
-                </label>
-                <label>
-                    <input type="radio" name="collisionMode" value="raycast" />
-                    RAYCAST
-                </label>
-            </div>
-            <div class="shape-selector">
-                <strong>SHAPE:</strong>
-                <label>
-                    <input type="radio" name="shape" value="6" checked />
-                    HEX
-                </label>
-                <label>
-                    <input type="radio" name="shape" value="3" />
-                    TRI
-                </label>
-                <label>
-                    <input type="radio" name="shape" value="4" />
-                    RECT
-                </label>
-                <label>
-                    <input type="radio" name="shape" value="STAR" />
-                    STAR
-                </label>
-                <label>
-                    <input type="radio" name="shape" value="U" />
-                    U-SHAPE
-                </label>
-            </div>
-            <div class="slider-container">
-                <label for="gravity">GRAVITY:</label>
-                <input type="range" id="gravity" />
-                <span id="gravityValue"></span>
-            </div>
-            <div class="slider-container">
-                <label for="rotation">ROTATION:</label>
-                <input type="range" id="rotation" />
-                <span id="rotationValue"></span>
-            </div>
-            <div class="slider-container">
-                <label for="elasticity">BOUNCE:</label>
-                <input type="range" id="elasticity" />
-                <span id="elasticityValue"></span>
-            </div>
+      <canvas id="canvas"></canvas>
+      <div class="controls">
+        <div class="shape-selector">
+          <strong>COLLISIONS:</strong>
+          <label>
+            <input type="radio" name="collisionMode" value="naive" checked />
+            NAIVE
+          </label>
+          <label>
+            <input type="radio" name="collisionMode" value="raycast" />
+            RAYCAST
+          </label>
         </div>
+        <div class="shape-selector">
+          <strong>SHAPE:</strong>
+          <label>
+            <input type="radio" name="shape" value="6" checked />
+            HEX
+          </label>
+          <label>
+            <input type="radio" name="shape" value="3" />
+            TRI
+          </label>
+          <label>
+            <input type="radio" name="shape" value="4" />
+            REC
+          </label>
+          <label>
+            <input type="radio" name="shape" value="STAR" />
+            STR
+          </label>
+          <label>
+            <input type="radio" name="shape" value="U" />
+            IRG
+          </label>
+        </div>
+        <div class="slider-container">
+          <label for="gravity">GRAVITY:</label>
+          <input type="range" id="gravity" />
+          <span id="gravityValue"></span>
+        </div>
+        <div class="slider-container">
+          <label for="rotation">ROTATION:</label>
+          <input type="range" id="rotation" />
+          <span id="rotationValue"></span>
+        </div>
+        <div class="slider-container">
+          <label for="elasticity">BOUNCE:</label>
+          <input type="range" id="elasticity" />
+          <span id="elasticityValue"></span>
+        </div>
+      </div>
     </div>
 
     <script>
-        // ===== HARDCODED CONFIGURATION =====
-        const CANVAS_WIDTH = 600;
-        const CANVAS_HEIGHT = 600;
-        const POLYGON_RADIUS = 220;
-        const POLYGON_BORDER_WIDTH = 4;
-        const RECTANGLE_ASPECT_RATIO = 3.67; // width:height ratio
-        const RECTANGLE_HEIGHT_SCALE = 0.6; // height scale relative to POLYGON_RADIUS
-        const STAR_OUTER_RADIUS_RATIO = 1.0; // outer points relative to POLYGON_RADIUS
-        const STAR_INNER_RADIUS_RATIO = 0.4; // inner points (concave angles) relative to POLYGON_RADIUS
-        const U_SHAPE_WIDTH_RATIO = 0.6; // overall width relative to POLYGON_RADIUS
-        const U_SHAPE_HEIGHT_RATIO = 1.2; // overall height relative to POLYGON_RADIUS (taller)
-        const U_SHAPE_NOTCH_WIDTH_RATIO = 0.4; // notch width relative to overall width
-        const U_SHAPE_NOTCH_DEPTH_RATIO = 0.65; // notch depth relative to overall height (much deeper)
-        const BALL_RADIUS = 16;
-        const BALL_BORDER_WIDTH = 2;
-        const RAYCAST_LINE_WIDTH = 2;
-        const RAYCAST_INSIDE_COLOR = 'rgba(0,160,0,.2)';
-        const RAYCAST_OUTSIDE_COLOR = 'rgba(200,0,0,.2)';
-        const RAYCAST_DOT_INSIDE_COLOR = 'rgba(0,160,0,1)';
-        const RAYCAST_DOT_OUTSIDE_COLOR = 'rgba(220,0,0,1)';
-        const RAYCAST_TEXT_INSIDE_COLOR = 'rgba(0,160,0,1)';
-        const RAYCAST_TEXT_OUTSIDE_COLOR = 'rgba(200,0,0,1)';
-        const RAYCAST_DOT_RADIUS = 6;
-        const RAYCAST_DOT_BORDER_WIDTH = 1;
-        const RAYCAST_TEXT_SIZE = 22;
-        const BACKGROUND_COLOR = '#f0f0f0';
-        const OPTIONS_BACKGROUND_COLOR = 'rgba(255, 255, 255, 0)';
+      // ===== HARDCODED CONFIGURATION =====
+      const CANVAS_WIDTH = 600;
+      const CANVAS_HEIGHT = 600;
+      const POLYGON_RADIUS = 220;
+      const POLYGON_BORDER_WIDTH = 4;
+      const RECTANGLE_ASPECT_RATIO = 3.67; // width:height ratio
+      const RECTANGLE_HEIGHT_SCALE = 0.6; // height scale relative to POLYGON_RADIUS
+      const STAR_OUTER_RADIUS_RATIO = 1.0; // outer points relative to POLYGON_RADIUS
+      const STAR_INNER_RADIUS_RATIO = 0.4; // inner points (concave angles) relative to POLYGON_RADIUS
+      const U_SHAPE_WIDTH_RATIO = 0.6; // overall width relative to POLYGON_RADIUS
+      const U_SHAPE_HEIGHT_RATIO = 1.2; // overall height relative to POLYGON_RADIUS (taller)
+      const U_SHAPE_NOTCH_WIDTH_RATIO = 0.4; // notch width relative to overall width
+      const U_SHAPE_NOTCH_DEPTH_RATIO = 0.65; // notch depth relative to overall height (much deeper)
+      const BALL_RADIUS = 16;
+      const BALL_BORDER_WIDTH = 2;
+      const RAYCAST_LINE_WIDTH = 2;
+      const RAYCAST_INSIDE_COLOR = 'rgba(0,160,0,.2)';
+      const RAYCAST_OUTSIDE_COLOR = 'rgba(200,0,0,.2)';
+      const RAYCAST_DOT_INSIDE_COLOR = 'rgba(0,160,0,1)';
+      const RAYCAST_DOT_OUTSIDE_COLOR = 'rgba(220,0,0,1)';
+      const RAYCAST_TEXT_INSIDE_COLOR = 'rgba(0,160,0,1)';
+      const RAYCAST_TEXT_OUTSIDE_COLOR = 'rgba(200,0,0,1)';
+      const RAYCAST_DOT_RADIUS = 6;
+      const RAYCAST_DOT_BORDER_WIDTH = 1;
+      const RAYCAST_TEXT_SIZE = 22;
+      const BACKGROUND_COLOR = '#f0f0f0';
+      const OPTIONS_BACKGROUND_COLOR = 'rgba(255, 255, 255, 0)';
 
-        // Muted, near-equal perceived brightness (Rec.709 luma ≈115)
-        // Earthy, muted primaries/secondaries with matched perceived brightness (~115 Rec.709)
-        // const BALL_COLORS = [
-        //     'rgb(210, 90, 60)',   // Red
-        //     'rgb(152, 114, 18)',  // Yellow
-        //     'rgb(42, 128, 222)',  // Blue
-        //     'rgb(35, 150, 35)',   // Green
-        //     'rgb(190, 95, 30)',   // Orange
-        //     'rgb(205, 80, 205)',  // Purple
-        // ];
+      // Muted, near-equal perceived brightness (Rec.709 luma ≈115)
+      // Earthy, muted primaries/secondaries with matched perceived brightness (~115 Rec.709)
+      // const BALL_COLORS = [
+      //     'rgb(210, 90, 60)',   // Red
+      //     'rgb(152, 114, 18)',  // Yellow
+      //     'rgb(42, 128, 222)',  // Blue
+      //     'rgb(35, 150, 35)',   // Green
+      //     'rgb(190, 95, 30)',   // Orange
+      //     'rgb(205, 80, 205)',  // Purple
+      // ];
 
-        // pure bright colors
-        const BALL_COLORS = [
-            'rgb(255, 0, 0)',     // Red
-            'rgb(255, 255, 0)',   // Yellow
-            'rgb(0, 0, 255)',     // Blue
-            'rgb(0, 255, 0)',     // Green
-            'rgb(255, 165, 0)',   // Orange
-            'rgb(128, 0, 128)',   // Purple
-        ];
+      // pure bright colors
+      const BALL_COLORS = [
+        'rgb(255, 0, 0)', // Red
+        'rgb(255, 255, 0)', // Yellow
+        'rgb(0, 0, 255)', // Blue
+        'rgb(0, 255, 0)', // Green
+        'rgb(255, 165, 0)', // Orange
+        'rgb(128, 0, 128)', // Purple
+      ];
 
-        const GRAVITY_MIN = -0.5;
-        const GRAVITY_MAX = 3;
-        const GRAVITY_STEP = 0.01;
-        const GRAVITY_DEFAULT = 1;
+      const GRAVITY_MIN = -0.5;
+      const GRAVITY_MAX = 3;
+      const GRAVITY_STEP = 0.01;
+      const GRAVITY_DEFAULT = 1;
 
-        const ROTATION_MIN = -0.2;
-        const ROTATION_MAX = 0.2;
-        const ROTATION_STEP = 0.001;
-        const ROTATION_DEFAULT = 0.01;
+      const ROTATION_MIN = -0.2;
+      const ROTATION_MAX = 0.2;
+      const ROTATION_STEP = 0.001;
+      const ROTATION_DEFAULT = 0.01;
 
-        const BOUNCE_MIN = 0.1;
-        const BOUNCE_MAX = 1;
-        const BOUNCE_STEP = 0.01;
-        const BOUNCE_DEFAULT = 0.98;
+      const BOUNCE_MIN = 0.1;
+      const BOUNCE_MAX = 1;
+      const BOUNCE_STEP = 0.01;
+      const BOUNCE_DEFAULT = 0.98;
 
-        const MAX_COLLISION_ITERATIONS = 3;
-        const MAX_COLLISION_ITERATIONS_PREDICT = 2;
-        const EPSILON = 1e-7;
-        const NUDGE_DISTANCE = 1e-4;
-        const DRIFT_CORRECTION_THRESHOLD = -1e-4;
+      const MAX_COLLISION_ITERATIONS = 3;
+      const MAX_COLLISION_ITERATIONS_PREDICT = 2;
+      const EPSILON = 1e-7;
+      const NUDGE_DISTANCE = 1e-4;
+      const DRIFT_CORRECTION_THRESHOLD = -1e-4;
 
-        const INITIAL_BALL_SPAWN_RADIUS = 80;
-        const INITIAL_BALL_VELOCITY_RANGE = 4;
+      const INITIAL_BALL_SPAWN_RADIUS = 80;
+      const INITIAL_BALL_VELOCITY_RANGE = 4;
 
-        // ===== END CONFIGURATION =====
+      // ===== END CONFIGURATION =====
 
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
 
-        // Set canvas dimensions from config
-        canvas.width = CANVAS_WIDTH;
-        canvas.height = CANVAS_HEIGHT;
+      // Set canvas dimensions from config
+      canvas.width = CANVAS_WIDTH;
+      canvas.height = CANVAS_HEIGHT;
 
-        // Set background colors from config
-        document.body.style.backgroundColor = BACKGROUND_COLOR;
-        document.querySelector('.controls').style.backgroundColor =
-            OPTIONS_BACKGROUND_COLOR;
+      // Set background colors from config
+      document.body.style.backgroundColor = BACKGROUND_COLOR;
+      document.querySelector('.controls').style.backgroundColor =
+        OPTIONS_BACKGROUND_COLOR;
 
-        const W = CANVAS_WIDTH,
-            H = CANVAS_HEIGHT;
-        const CX = W / 2,
-            CY = H / 2;
+      const W = CANVAS_WIDTH,
+        H = CANVAS_HEIGHT;
+      const CX = W / 2,
+        CY = H / 2;
 
-        // Controls
-        const gravitySlider = document.getElementById('gravity');
-        const rotationSlider = document.getElementById('rotation');
-        const elasticitySlider = document.getElementById('elasticity');
+      // Controls
+      const gravitySlider = document.getElementById('gravity');
+      const rotationSlider = document.getElementById('rotation');
+      const elasticitySlider = document.getElementById('elasticity');
 
-        const gravityValue = document.getElementById('gravityValue');
-        const rotationValue = document.getElementById('rotationValue');
-        const elasticityValue = document.getElementById('elasticityValue');
+      const gravityValue = document.getElementById('gravityValue');
+      const rotationValue = document.getElementById('rotationValue');
+      const elasticityValue = document.getElementById('elasticityValue');
 
-        const shapeRadios = document.querySelectorAll('input[name="shape"]');
-        const collisionRadios = document.querySelectorAll(
-            'input[name="collisionMode"]'
-        );
+      const shapeRadios = document.querySelectorAll('input[name="shape"]');
+      const collisionRadios = document.querySelectorAll(
+        'input[name="collisionMode"]'
+      );
 
-        // Set slider attributes from config
-        gravitySlider.min = GRAVITY_MIN;
-        gravitySlider.max = GRAVITY_MAX;
-        gravitySlider.step = GRAVITY_STEP;
-        gravitySlider.value = GRAVITY_DEFAULT;
+      // Set slider attributes from config
+      gravitySlider.min = GRAVITY_MIN;
+      gravitySlider.max = GRAVITY_MAX;
+      gravitySlider.step = GRAVITY_STEP;
+      gravitySlider.value = GRAVITY_DEFAULT;
 
-        rotationSlider.min = ROTATION_MIN;
-        rotationSlider.max = ROTATION_MAX;
-        rotationSlider.step = ROTATION_STEP;
-        rotationSlider.value = ROTATION_DEFAULT;
+      rotationSlider.min = ROTATION_MIN;
+      rotationSlider.max = ROTATION_MAX;
+      rotationSlider.step = ROTATION_STEP;
+      rotationSlider.value = ROTATION_DEFAULT;
 
-        elasticitySlider.min = BOUNCE_MIN;
-        elasticitySlider.max = BOUNCE_MAX;
-        elasticitySlider.step = BOUNCE_STEP;
-        elasticitySlider.value = BOUNCE_DEFAULT;
+      elasticitySlider.min = BOUNCE_MIN;
+      elasticitySlider.max = BOUNCE_MAX;
+      elasticitySlider.step = BOUNCE_STEP;
+      elasticitySlider.value = BOUNCE_DEFAULT;
 
-        // State
-        let gravity = GRAVITY_DEFAULT;
-        let omega = ROTATION_DEFAULT;
-        let eRest = BOUNCE_DEFAULT;
-        let shapeType = '6'; // can be '3', '4', '6', or 'STAR'
-        let mode = 'naive';
+      // State
+      let gravity = GRAVITY_DEFAULT;
+      let omega = ROTATION_DEFAULT;
+      let eRest = BOUNCE_DEFAULT;
+      let shapeType = '6'; // can be '3', '4', '6', or 'STAR'
+      let mode = 'naive';
 
-        const R = POLYGON_RADIUS;
-        let theta = 0;
-        const balls = [];
+      const R = POLYGON_RADIUS;
+      let theta = 0;
+      const balls = [];
 
-        // Polygon vertices
-        function getVerticesLocal() {
-            const verts = [];
+      // Polygon vertices
+      function getVerticesLocal() {
+        const verts = [];
 
-            if (shapeType === 'STAR') {
-                // 5-pointed star (concave polygon)
-                const outerR = R * STAR_OUTER_RADIUS_RATIO;
-                const innerR = R * STAR_INNER_RADIUS_RATIO;
-                const numPoints = 5;
-                for (let i = 0; i < numPoints * 2; i++) {
-                    const angle = (i * Math.PI) / numPoints - Math.PI / 2;
-                    const radius = i % 2 === 0 ? outerR : innerR;
-                    verts.push({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
-                }
-            } else if (shapeType === '4') {
-                // Rectangle with aspect ratio
-                const halfHeight = R * RECTANGLE_HEIGHT_SCALE;
-                const halfWidth = halfHeight * RECTANGLE_ASPECT_RATIO;
-                verts.push({ x: halfWidth, y: -halfHeight });   // top-right
-                verts.push({ x: halfWidth, y: halfHeight });    // bottom-right
-                verts.push({ x: -halfWidth, y: halfHeight });   // bottom-left
-                verts.push({ x: -halfWidth, y: -halfHeight });  // top-left
-            } else if (shapeType === 'U') {
-                // Double-notched shape (notches on left and right sides)
-                const halfWidth = R * U_SHAPE_WIDTH_RATIO;
-                const halfHeight = R * U_SHAPE_HEIGHT_RATIO;
-                const notchHeight = halfHeight * U_SHAPE_NOTCH_WIDTH_RATIO;
-                const notchDepth = halfWidth * U_SHAPE_NOTCH_DEPTH_RATIO;
-
-                // Start from bottom-left, go counter-clockwise
-                verts.push({ x: -halfWidth, y: halfHeight });                    // bottom-left corner
-                verts.push({ x: -halfWidth, y: notchHeight });                   // left notch top
-                verts.push({ x: -halfWidth + notchDepth, y: notchHeight });      // left notch inner top
-                verts.push({ x: -halfWidth + notchDepth, y: -notchHeight });     // left notch inner bottom
-                verts.push({ x: -halfWidth, y: -notchHeight });                  // left notch bottom
-                verts.push({ x: -halfWidth, y: -halfHeight });                   // top-left corner
-                verts.push({ x: halfWidth, y: -halfHeight });                    // top-right corner
-                verts.push({ x: halfWidth, y: -notchHeight });                   // right notch top
-                verts.push({ x: halfWidth - notchDepth, y: -notchHeight });      // right notch inner top
-                verts.push({ x: halfWidth - notchDepth, y: notchHeight });       // right notch inner bottom
-                verts.push({ x: halfWidth, y: notchHeight });                    // right notch bottom
-                verts.push({ x: halfWidth, y: halfHeight });                     // bottom-right corner
-            } else {
-                // Regular polygon (triangle, hexagon, etc.)
-                const numSides = parseInt(shapeType);
-                for (let i = 0; i < numSides; i++) {
-                    const angle = (i * 2 * Math.PI) / numSides - Math.PI / 2;
-                    verts.push({ x: Math.cos(angle) * R, y: Math.sin(angle) * R });
-                }
-            }
-            return verts;
-        }
-
-        function rotatePoint(x, y, angle) {
-            return {
-                x: x * Math.cos(angle) - y * Math.sin(angle),
-                y: x * Math.sin(angle) + y * Math.cos(angle),
-            };
-        }
-
-        function getVerticesWorld() {
-            const local = getVerticesLocal();
-            return local.map((v) => {
-                const rot = rotatePoint(v.x, v.y, theta);
-                return { x: rot.x + CX, y: rot.y + CY };
+        if (shapeType === 'STAR') {
+          // 5-pointed star (concave polygon)
+          const outerR = R * STAR_OUTER_RADIUS_RATIO;
+          const innerR = R * STAR_INNER_RADIUS_RATIO;
+          const numPoints = 5;
+          for (let i = 0; i < numPoints * 2; i++) {
+            const angle = (i * Math.PI) / numPoints - Math.PI / 2;
+            const radius = i % 2 === 0 ? outerR : innerR;
+            verts.push({
+              x: Math.cos(angle) * radius,
+              y: Math.sin(angle) * radius,
             });
+          }
+        } else if (shapeType === '4') {
+          // Rectangle with aspect ratio
+          const halfHeight = R * RECTANGLE_HEIGHT_SCALE;
+          const halfWidth = halfHeight * RECTANGLE_ASPECT_RATIO;
+          verts.push({ x: halfWidth, y: -halfHeight }); // top-right
+          verts.push({ x: halfWidth, y: halfHeight }); // bottom-right
+          verts.push({ x: -halfWidth, y: halfHeight }); // bottom-left
+          verts.push({ x: -halfWidth, y: -halfHeight }); // top-left
+        } else if (shapeType === 'U') {
+          // Double-notched shape (notches on left and right sides)
+          const halfWidth = R * U_SHAPE_WIDTH_RATIO;
+          const halfHeight = R * U_SHAPE_HEIGHT_RATIO;
+          const notchHeight = halfHeight * U_SHAPE_NOTCH_WIDTH_RATIO;
+          const notchDepth = halfWidth * U_SHAPE_NOTCH_DEPTH_RATIO;
+
+          // Start from bottom-left, go counter-clockwise
+          verts.push({ x: -halfWidth, y: halfHeight }); // bottom-left corner
+          verts.push({ x: -halfWidth, y: notchHeight }); // left notch top
+          verts.push({ x: -halfWidth + notchDepth, y: notchHeight }); // left notch inner top
+          verts.push({ x: -halfWidth + notchDepth, y: -notchHeight }); // left notch inner bottom
+          verts.push({ x: -halfWidth, y: -notchHeight }); // left notch bottom
+          verts.push({ x: -halfWidth, y: -halfHeight }); // top-left corner
+          verts.push({ x: halfWidth, y: -halfHeight }); // top-right corner
+          verts.push({ x: halfWidth, y: -notchHeight }); // right notch top
+          verts.push({ x: halfWidth - notchDepth, y: -notchHeight }); // right notch inner top
+          verts.push({ x: halfWidth - notchDepth, y: notchHeight }); // right notch inner bottom
+          verts.push({ x: halfWidth, y: notchHeight }); // right notch bottom
+          verts.push({ x: halfWidth, y: halfHeight }); // bottom-right corner
+        } else {
+          // Regular polygon (triangle, hexagon, etc.)
+          const numSides = parseInt(shapeType);
+          for (let i = 0; i < numSides; i++) {
+            const angle = (i * 2 * Math.PI) / numSides - Math.PI / 2;
+            verts.push({ x: Math.cos(angle) * R, y: Math.sin(angle) * R });
+          }
         }
+        return verts;
+      }
 
-        // Init balls
-        function initBalls() {
-            balls.length = 0;
-            const numBalls = BALL_COLORS.length;
-            for (let i = 0; i < numBalls; i++) {
-                const angle = (i * 2 * Math.PI) / numBalls;
-                const dist = Math.random() * INITIAL_BALL_SPAWN_RADIUS;
-                const color = BALL_COLORS[i];
-                balls.push({
-                    x: CX + Math.cos(angle) * dist,
-                    y: CY + Math.sin(angle) * dist,
-                    vx: (Math.random() - 0.5) * INITIAL_BALL_VELOCITY_RANGE,
-                    vy: (Math.random() - 0.5) * INITIAL_BALL_VELOCITY_RANGE,
-                    radius: BALL_RADIUS,
-                    color: color,
-                });
-            }
+      function rotatePoint(x, y, angle) {
+        return {
+          x: x * Math.cos(angle) - y * Math.sin(angle),
+          y: x * Math.sin(angle) + y * Math.cos(angle),
+        };
+      }
+
+      function getVerticesWorld() {
+        const local = getVerticesLocal();
+        return local.map((v) => {
+          const rot = rotatePoint(v.x, v.y, theta);
+          return { x: rot.x + CX, y: rot.y + CY };
+        });
+      }
+
+      // Init balls
+      function initBalls() {
+        balls.length = 0;
+        const numBalls = BALL_COLORS.length;
+        for (let i = 0; i < numBalls; i++) {
+          const angle = (i * 2 * Math.PI) / numBalls;
+          const dist = Math.random() * INITIAL_BALL_SPAWN_RADIUS;
+          const color = BALL_COLORS[i];
+          balls.push({
+            x: CX + Math.cos(angle) * dist,
+            y: CY + Math.sin(angle) * dist,
+            vx: (Math.random() - 0.5) * INITIAL_BALL_VELOCITY_RANGE,
+            vy: (Math.random() - 0.5) * INITIAL_BALL_VELOCITY_RANGE,
+            radius: BALL_RADIUS,
+            color: color,
+          });
         }
+      }
 
-        initBalls();
+      initBalls();
 
-        // Drawing
-        function drawPolygon(verts) {
-            ctx.beginPath();
-            for (let i = 0; i < verts.length; i++) {
-                if (i === 0) ctx.moveTo(verts[i].x, verts[i].y);
-                else ctx.lineTo(verts[i].x, verts[i].y);
-            }
-            ctx.closePath();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = POLYGON_BORDER_WIDTH;
-            ctx.stroke();
+      // Drawing
+      function drawPolygon(verts) {
+        ctx.beginPath();
+        for (let i = 0; i < verts.length; i++) {
+          if (i === 0) ctx.moveTo(verts[i].x, verts[i].y);
+          else ctx.lineTo(verts[i].x, verts[i].y);
         }
+        ctx.closePath();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = POLYGON_BORDER_WIDTH;
+        ctx.stroke();
+      }
 
-        function drawBall(ball) {
-            ctx.beginPath();
-            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-            ctx.fillStyle = ball.color;
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = BALL_BORDER_WIDTH;
-            ctx.stroke();
-        }
+      function drawBall(ball) {
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = ball.color;
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = BALL_BORDER_WIDTH;
+        ctx.stroke();
+      }
 
-        // Controls update
-        function updateControls() {
-            gravityValue.textContent = gravity.toFixed(2);
-            rotationValue.textContent = omega.toFixed(3);
-            elasticityValue.textContent = eRest.toFixed(2);
-        }
+      // Controls update
+      function updateControls() {
+        gravityValue.textContent = gravity.toFixed(2);
+        rotationValue.textContent = omega.toFixed(3);
+        elasticityValue.textContent = eRest.toFixed(2);
+      }
 
-        gravitySlider.addEventListener('input', () => {
-            gravity = parseFloat(gravitySlider.value);
-            updateControls();
-        });
-
-        rotationSlider.addEventListener('input', () => {
-            omega = parseFloat(rotationSlider.value);
-            updateControls();
-        });
-
-        elasticitySlider.addEventListener('input', () => {
-            eRest = parseFloat(elasticitySlider.value);
-            updateControls();
-        });
-
-        shapeRadios.forEach((radio) => {
-            radio.addEventListener('change', () => {
-                shapeType = radio.value;
-                initBalls();
-            });
-        });
-
-        collisionRadios.forEach((radio) => {
-            radio.addEventListener('change', () => {
-                mode = radio.value;
-            });
-        });
-
+      gravitySlider.addEventListener('input', () => {
+        gravity = parseFloat(gravitySlider.value);
         updateControls();
+      });
 
-        // Raycast integrators
-        function worldToLocalPoint(x, y) {
-            const dx = x - CX,
-                dy = y - CY;
-            const p = rotatePoint(dx, dy, -theta);
-            return { x: p.x, y: p.y };
+      rotationSlider.addEventListener('input', () => {
+        omega = parseFloat(rotationSlider.value);
+        updateControls();
+      });
+
+      elasticitySlider.addEventListener('input', () => {
+        eRest = parseFloat(elasticitySlider.value);
+        updateControls();
+      });
+
+      shapeRadios.forEach((radio) => {
+        radio.addEventListener('change', () => {
+          shapeType = radio.value;
+          initBalls();
+        });
+      });
+
+      collisionRadios.forEach((radio) => {
+        radio.addEventListener('change', () => {
+          mode = radio.value;
+        });
+      });
+
+      updateControls();
+
+      // Raycast integrators
+      function worldToLocalPoint(x, y) {
+        const dx = x - CX,
+          dy = y - CY;
+        const p = rotatePoint(dx, dy, -theta);
+        return { x: p.x, y: p.y };
+      }
+
+      function localToWorldPoint(x, y) {
+        const p = rotatePoint(x, y, theta);
+        return { x: p.x + CX, y: p.y + CY };
+      }
+
+      function worldToLocalVec(vx, vy) {
+        return rotatePoint(vx, vy, -theta);
+      }
+
+      function localToWorldVec(vx, vy) {
+        return rotatePoint(vx, vy, theta);
+      }
+
+      // Edges
+      function buildEdgesLocal(vertsWorld) {
+        const vertsLocal = vertsWorld.map((v) => worldToLocalPoint(v.x, v.y));
+        const edges = [];
+        for (let i = 0; i < vertsLocal.length; i++) {
+          const a = vertsLocal[i],
+            b = vertsLocal[(i + 1) % vertsLocal.length];
+          const dx = b.x - a.x,
+            dy = b.y - a.y,
+            len = Math.hypot(dx, dy);
+          const n = { x: -dy / len, y: dx / len };
+          edges.push({ a, b, n });
         }
+        return { edges, vertsLocal };
+      }
 
-        function localToWorldPoint(x, y) {
-            const p = rotatePoint(x, y, theta);
-            return { x: p.x + CX, y: p.y + CY };
+      // Point-in-polygon test (ray casting algorithm) - local coords
+      function isPointInPolygonLocal(px, py, edges) {
+        let inside = false;
+        for (const edge of edges) {
+          const x1 = edge.a.x,
+            y1 = edge.a.y;
+          const x2 = edge.b.x,
+            y2 = edge.b.y;
+          const intersect =
+            y1 > py !== y2 > py &&
+            px < ((x2 - x1) * (py - y1)) / (y2 - y1) + x1;
+          if (intersect) inside = !inside;
         }
+        return inside;
+      }
 
-        function worldToLocalVec(vx, vy) {
-            return rotatePoint(vx, vy, -theta);
-        }
+      // Find boundary crossing when moving from inside to outside
+      function findBoundaryCrossing(p1, p2, edges) {
+        let bestT = Infinity;
+        let bestEdge = null;
+        let bestHit = null;
 
-        function localToWorldVec(vx, vy) {
-            return rotatePoint(vx, vy, theta);
-        }
+        for (const edge of edges) {
+          // Line segment from p1 to p2
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
 
-        // Edges
-        function buildEdgesLocal(vertsWorld) {
-            const vertsLocal = vertsWorld.map((v) => worldToLocalPoint(v.x, v.y));
-            const edges = [];
-            for (let i = 0; i < vertsLocal.length; i++) {
-                const a = vertsLocal[i],
-                    b = vertsLocal[(i + 1) % vertsLocal.length];
-                const dx = b.x - a.x,
-                    dy = b.y - a.y,
-                    len = Math.hypot(dx, dy);
-                const n = { x: -dy / len, y: dx / len };
-                edges.push({ a, b, n });
+          // Edge from edge.a to edge.b
+          const ex = edge.b.x - edge.a.x;
+          const ey = edge.b.y - edge.a.y;
+
+          // Find intersection of ray (p1 -> p2) with edge line
+          const denom = dx * ey - dy * ex;
+          if (Math.abs(denom) < EPSILON) continue; // Parallel
+
+          const t = ((edge.a.x - p1.x) * ey - (edge.a.y - p1.y) * ex) / denom;
+          const u = ((edge.a.x - p1.x) * dy - (edge.a.y - p1.y) * dx) / denom;
+
+          // Check if intersection is within both segments
+          if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+            if (t < bestT) {
+              bestT = t;
+              bestEdge = edge;
+              bestHit = {
+                x: p1.x + t * dx,
+                y: p1.y + t * dy,
+              };
             }
-            return { edges, vertsLocal };
+          }
         }
 
-        // Point-in-polygon test (ray casting algorithm) - local coords
-        function isPointInPolygonLocal(px, py, edges) {
-            let inside = false;
-            for (const edge of edges) {
-                const x1 = edge.a.x, y1 = edge.a.y;
-                const x2 = edge.b.x, y2 = edge.b.y;
-                const intersect = y1 > py !== y2 > py &&
-                    px < ((x2 - x1) * (py - y1)) / (y2 - y1) + x1;
-                if (intersect) inside = !inside;
-            }
-            return inside;
+        if (bestEdge) {
+          // Calculate normal at hit point
+          // Normal should point from inside to outside
+          const edgeVec = {
+            x: bestEdge.b.x - bestEdge.a.x,
+            y: bestEdge.b.y - bestEdge.a.y,
+          };
+          const len = Math.hypot(edgeVec.x, edgeVec.y);
+          // Perpendicular to edge (could point either way)
+          let nx = -edgeVec.y / len;
+          let ny = edgeVec.x / len;
+
+          // Make sure normal points outward (from p1 toward p2)
+          const movementDir = { x: p2.x - p1.x, y: p2.y - p1.y };
+          const dot = nx * movementDir.x + ny * movementDir.y;
+          if (dot < 0) {
+            nx = -nx;
+            ny = -ny;
+          }
+
+          return {
+            hit: true,
+            t: bestT,
+            hitPoint: bestHit,
+            n: { x: nx, y: ny },
+          };
         }
 
-        // Find boundary crossing when moving from inside to outside
-        function findBoundaryCrossing(p1, p2, edges) {
-            let bestT = Infinity;
-            let bestEdge = null;
-            let bestHit = null;
+        return { hit: false };
+      }
 
-            for (const edge of edges) {
-                // Line segment from p1 to p2
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
+      // Find closest point on polygon boundary to a given point
+      function findClosestBoundaryPoint(p, edges) {
+        let closestDist = Infinity;
+        let closestPoint = null;
+        let closestEdge = null;
 
-                // Edge from edge.a to edge.b
-                const ex = edge.b.x - edge.a.x;
-                const ey = edge.b.y - edge.a.y;
+        for (const edge of edges) {
+          const ex = edge.b.x - edge.a.x;
+          const ey = edge.b.y - edge.a.y;
+          const edgeLengthSq = ex * ex + ey * ey;
 
-                // Find intersection of ray (p1 -> p2) with edge line
-                const denom = dx * ey - dy * ex;
-                if (Math.abs(denom) < EPSILON) continue; // Parallel
+          const toBallX = p.x - edge.a.x;
+          const toBallY = p.y - edge.a.y;
+          const t = Math.max(
+            0,
+            Math.min(1, (toBallX * ex + toBallY * ey) / edgeLengthSq)
+          );
 
-                const t = ((edge.a.x - p1.x) * ey - (edge.a.y - p1.y) * ex) / denom;
-                const u = ((edge.a.x - p1.x) * dy - (edge.a.y - p1.y) * dx) / denom;
+          const closestX = edge.a.x + t * ex;
+          const closestY = edge.a.y + t * ey;
+          const dist = Math.hypot(p.x - closestX, p.y - closestY);
 
-                // Check if intersection is within both segments
-                if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-                    if (t < bestT) {
-                        bestT = t;
-                        bestEdge = edge;
-                        bestHit = {
-                            x: p1.x + t * dx,
-                            y: p1.y + t * dy
-                        };
-                    }
-                }
-            }
-
-            if (bestEdge) {
-                // Calculate normal at hit point
-                // Normal should point from inside to outside
-                const edgeVec = { x: bestEdge.b.x - bestEdge.a.x, y: bestEdge.b.y - bestEdge.a.y };
-                const len = Math.hypot(edgeVec.x, edgeVec.y);
-                // Perpendicular to edge (could point either way)
-                let nx = -edgeVec.y / len;
-                let ny = edgeVec.x / len;
-
-                // Make sure normal points outward (from p1 toward p2)
-                const movementDir = { x: p2.x - p1.x, y: p2.y - p1.y };
-                const dot = nx * movementDir.x + ny * movementDir.y;
-                if (dot < 0) {
-                    nx = -nx;
-                    ny = -ny;
-                }
-
-                return {
-                    hit: true,
-                    t: bestT,
-                    hitPoint: bestHit,
-                    n: { x: nx, y: ny }
-                };
-            }
-
-            return { hit: false };
+          if (dist < closestDist) {
+            closestDist = dist;
+            closestPoint = { x: closestX, y: closestY };
+            closestEdge = edge;
+          }
         }
 
-        // Find closest point on polygon boundary to a given point
-        function findClosestBoundaryPoint(p, edges) {
-            let closestDist = Infinity;
-            let closestPoint = null;
-            let closestEdge = null;
+        if (closestPoint && closestEdge) {
+          // Calculate normal pointing from closest point toward p (outward)
+          const dx = p.x - closestPoint.x;
+          const dy = p.y - closestPoint.y;
+          const d = Math.hypot(dx, dy);
 
-            for (const edge of edges) {
-                const ex = edge.b.x - edge.a.x;
-                const ey = edge.b.y - edge.a.y;
-                const edgeLengthSq = ex * ex + ey * ey;
+          let nx, ny;
+          if (d > EPSILON) {
+            nx = dx / d;
+            ny = dy / d;
+          } else {
+            // Use edge perpendicular
+            const edgeVec = {
+              x: closestEdge.b.x - closestEdge.a.x,
+              y: closestEdge.b.y - closestEdge.a.y,
+            };
+            const len = Math.hypot(edgeVec.x, edgeVec.y);
+            nx = -edgeVec.y / len;
+            ny = edgeVec.x / len;
+          }
 
-                const toBallX = p.x - edge.a.x;
-                const toBallY = p.y - edge.a.y;
-                const t = Math.max(0, Math.min(1, (toBallX * ex + toBallY * ey) / edgeLengthSq));
-
-                const closestX = edge.a.x + t * ex;
-                const closestY = edge.a.y + t * ey;
-                const dist = Math.hypot(p.x - closestX, p.y - closestY);
-
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closestPoint = { x: closestX, y: closestY };
-                    closestEdge = edge;
-                }
-            }
-
-            if (closestPoint && closestEdge) {
-                // Calculate normal pointing from closest point toward p (outward)
-                const dx = p.x - closestPoint.x;
-                const dy = p.y - closestPoint.y;
-                const d = Math.hypot(dx, dy);
-
-                let nx, ny;
-                if (d > EPSILON) {
-                    nx = dx / d;
-                    ny = dy / d;
-                } else {
-                    // Use edge perpendicular
-                    const edgeVec = { x: closestEdge.b.x - closestEdge.a.x, y: closestEdge.b.y - closestEdge.a.y };
-                    const len = Math.hypot(edgeVec.x, edgeVec.y);
-                    nx = -edgeVec.y / len;
-                    ny = edgeVec.x / len;
-                }
-
-                return { point: closestPoint, normal: { x: nx, y: ny } };
-            }
-
-            return null;
+          return { point: closestPoint, normal: { x: nx, y: ny } };
         }
 
-        // Check if ball is outside polygon and fix it (for post-rotation correction)
-        function fixBallIfOutside(ball, vertsWorld) {
-            const { edges } = buildEdgesLocal(vertsWorld);
-            const pL = worldToLocalPoint(ball.x, ball.y);
-            let vL = worldToLocalVec(ball.vx, ball.vy);
+        return null;
+      }
 
-            const inside = isPointInPolygonLocal(pL.x, pL.y, edges);
+      // Check if ball is outside polygon and fix it (for post-rotation correction)
+      function fixBallIfOutside(ball, vertsWorld) {
+        const { edges } = buildEdgesLocal(vertsWorld);
+        const pL = worldToLocalPoint(ball.x, ball.y);
+        let vL = worldToLocalVec(ball.vx, ball.vy);
 
-            if (!inside) {
-                // Ball is outside - push back inside and bounce
-                const closest = findClosestBoundaryPoint(pL, edges);
-                if (closest) {
-                    // Reflect velocity if moving outward
-                    const vrn = vL.x * closest.normal.x + vL.y * closest.normal.y;
-                    if (vrn > 0) {
-                        const j = (1 + eRest) * vrn;
-                        vL.x -= j * closest.normal.x;
-                        vL.y -= j * closest.normal.y;
-                    }
+        const inside = isPointInPolygonLocal(pL.x, pL.y, edges);
 
-                    // Place well inside the polygon
-                    const pLNew = {
-                        x: closest.point.x - closest.normal.x * (NUDGE_DISTANCE * 10),
-                        y: closest.point.y - closest.normal.y * (NUDGE_DISTANCE * 10)
-                    };
-
-                    const pW = localToWorldPoint(pLNew.x, pLNew.y);
-                    const vW = localToWorldVec(vL.x, vL.y);
-                    ball.x = pW.x;
-                    ball.y = pW.y;
-                    ball.vx = vW.x;
-                    ball.vy = vW.y;
-                }
-            }
-        }
-
-        // Continuous integrator (raycast) - basic version used as fallback
-        // Treats ball as a point (radius = 0)
-        // Uses proper point-in-polygon testing to respect polygon boundaries
-        function integrateRaycastLocalBasic(ball, vertsWorld, dt) {
-            const { edges } = buildEdgesLocal(vertsWorld);
-            let pL = worldToLocalPoint(ball.x, ball.y);
-            let vL = worldToLocalVec(ball.vx, ball.vy);
-            let remaining = dt;
-
-            for (let i = 0; i < MAX_COLLISION_ITERATIONS && remaining > EPSILON; i++) {
-                // Current position
-                const p1 = { x: pL.x, y: pL.y };
-
-                // Where we'd move to
-                const p2 = {
-                    x: pL.x + vL.x * remaining,
-                    y: pL.y + vL.y * remaining
-                };
-
-                // Check if we're transitioning from inside to outside
-                const inside1 = isPointInPolygonLocal(p1.x, p1.y, edges);
-                const inside2 = isPointInPolygonLocal(p2.x, p2.y, edges);
-
-                if (inside1 && !inside2) {
-                    // We're leaving the polygon - find the crossing point
-                    const crossing = findBoundaryCrossing(p1, p2, edges);
-
-                    if (crossing.hit) {
-                        // Move to crossing point
-                        pL.x = crossing.hitPoint.x;
-                        pL.y = crossing.hitPoint.y;
-
-                        // Reflect velocity
-                        const vrn = vL.x * crossing.n.x + vL.y * crossing.n.y;
-                        if (vrn > 0) {
-                            const j = (1 + eRest) * vrn;
-                            vL.x -= j * crossing.n.x;
-                            vL.y -= j * crossing.n.y;
-                        }
-
-                        // Nudge back inside
-                        pL.x -= crossing.n.x * NUDGE_DISTANCE;
-                        pL.y -= crossing.n.y * NUDGE_DISTANCE;
-
-                        remaining *= (1 - crossing.t);
-                    } else {
-                        // Couldn't find crossing, just move
-                        pL.x = p2.x;
-                        pL.y = p2.y;
-                        remaining = 0;
-                    }
-                } else if (!inside1) {
-                    // We're outside - push back inside and continue moving
-                    const closest = findClosestBoundaryPoint(p1, edges);
-                    if (closest) {
-                        // Reflect velocity if moving outward
-                        const vrn = vL.x * closest.normal.x + vL.y * closest.normal.y;
-                        if (vrn > 0) {
-                            const j = (1 + eRest) * vrn;
-                            vL.x -= j * closest.normal.x;
-                            vL.y -= j * closest.normal.y;
-                        }
-
-                        // Place well inside the polygon (not on boundary)
-                        pL.x = closest.point.x - closest.normal.x * (NUDGE_DISTANCE * 10);
-                        pL.y = closest.point.y - closest.normal.y * (NUDGE_DISTANCE * 10);
-
-                        // Now move for the remaining time from this corrected position
-                        const newP2 = {
-                            x: pL.x + vL.x * remaining,
-                            y: pL.y + vL.y * remaining
-                        };
-
-                        // Check if we can move to newP2 without leaving
-                        const newInside = isPointInPolygonLocal(newP2.x, newP2.y, edges);
-                        if (newInside) {
-                            // Safe to move
-                            pL.x = newP2.x;
-                            pL.y = newP2.y;
-                        }
-                        // else stay at corrected position
-                    }
-                    remaining = 0;
-                } else {
-                    // We're staying inside, just move
-                    pL.x = p2.x;
-                    pL.y = p2.y;
-                    remaining = 0;
-                }
+        if (!inside) {
+          // Ball is outside - push back inside and bounce
+          const closest = findClosestBoundaryPoint(pL, edges);
+          if (closest) {
+            // Reflect velocity if moving outward
+            const vrn = vL.x * closest.normal.x + vL.y * closest.normal.y;
+            if (vrn > 0) {
+              const j = (1 + eRest) * vrn;
+              vL.x -= j * closest.normal.x;
+              vL.y -= j * closest.normal.y;
             }
 
-            const pW = localToWorldPoint(pL.x, pL.y);
+            // Place well inside the polygon
+            const pLNew = {
+              x: closest.point.x - closest.normal.x * (NUDGE_DISTANCE * 10),
+              y: closest.point.y - closest.normal.y * (NUDGE_DISTANCE * 10),
+            };
+
+            const pW = localToWorldPoint(pLNew.x, pLNew.y);
             const vW = localToWorldVec(vL.x, vL.y);
             ball.x = pW.x;
             ball.y = pW.y;
             ball.vx = vW.x;
             ball.vy = vW.y;
+          }
         }
+      }
 
-        // Raycast: checks if the next position would be outside the shape (predictive)
-        // If a collision would occur in (dt, 2dt], we execute that first bounce at tEarly = tau - dt now.
-        // Treats ball as a point (radius = 0)
-        function integrateRaycastLocal(ball, vertsWorld, dt) {
-            const { edges } = buildEdgesLocal(vertsWorld);
-            let pL = worldToLocalPoint(ball.x, ball.y);
-            let vL = worldToLocalVec(ball.vx, ball.vy);
+      // Continuous integrator (raycast) - basic version used as fallback
+      // Treats ball as a point (radius = 0)
+      // Uses proper point-in-polygon testing to respect polygon boundaries
+      function integrateRaycastLocalBasic(ball, vertsWorld, dt) {
+        const { edges } = buildEdgesLocal(vertsWorld);
+        let pL = worldToLocalPoint(ball.x, ball.y);
+        let vL = worldToLocalVec(ball.vx, ball.vy);
+        let remaining = dt;
 
-            // Look ahead 2*dt to see if we'd cross boundary
-            const p1 = { x: pL.x, y: pL.y };
-            const p2Ahead = {
-                x: pL.x + vL.x * (2 * dt),
-                y: pL.y + vL.y * (2 * dt)
-            };
+        for (
+          let i = 0;
+          i < MAX_COLLISION_ITERATIONS && remaining > EPSILON;
+          i++
+        ) {
+          // Current position
+          const p1 = { x: pL.x, y: pL.y };
 
-            const inside1 = isPointInPolygonLocal(p1.x, p1.y, edges);
-            const inside2Ahead = isPointInPolygonLocal(p2Ahead.x, p2Ahead.y, edges);
+          // Where we'd move to
+          const p2 = {
+            x: pL.x + vL.x * remaining,
+            y: pL.y + vL.y * remaining,
+          };
 
-            // Check if we'd cross the boundary in the next 2 frames
-            if (inside1 && !inside2Ahead) {
-                const lookAhead = findBoundaryCrossing(p1, p2Ahead, edges);
+          // Check if we're transitioning from inside to outside
+          const inside1 = isPointInPolygonLocal(p1.x, p1.y, edges);
+          const inside2 = isPointInPolygonLocal(p2.x, p2.y, edges);
 
-                if (lookAhead.hit) {
-                    // Calculate absolute time to crossing
-                    const tau = lookAhead.t * (2 * dt);
+          if (inside1 && !inside2) {
+            // We're leaving the polygon - find the crossing point
+            const crossing = findBoundaryCrossing(p1, p2, edges);
 
-                    // If crossing happens in next frame (not this frame), execute early
-                    if (tau > dt + EPSILON) {
-                        // Execute the bounce one frame early
-                        const tEarly = tau - dt;
+            if (crossing.hit) {
+              // Move to crossing point
+              pL.x = crossing.hitPoint.x;
+              pL.y = crossing.hitPoint.y;
 
-                        // Advance to early contact time
-                        pL.x += vL.x * tEarly;
-                        pL.y += vL.y * tEarly;
+              // Reflect velocity
+              const vrn = vL.x * crossing.n.x + vL.y * crossing.n.y;
+              if (vrn > 0) {
+                const j = (1 + eRest) * vrn;
+                vL.x -= j * crossing.n.x;
+                vL.y -= j * crossing.n.y;
+              }
 
-                        // Reflect velocity
-                        const vrn = vL.x * lookAhead.n.x + vL.y * lookAhead.n.y;
-                        if (vrn > 0) {
-                            const j = (1 + eRest) * vrn;
-                            vL.x -= j * lookAhead.n.x;
-                            vL.y -= j * lookAhead.n.y;
-                        }
+              // Nudge back inside
+              pL.x -= crossing.n.x * NUDGE_DISTANCE;
+              pL.y -= crossing.n.y * NUDGE_DISTANCE;
 
-                        // Nudge back inside
-                        pL.x -= lookAhead.n.x * NUDGE_DISTANCE;
-                        pL.y -= lookAhead.n.y * NUDGE_DISTANCE;
-
-                        // Continue with remaining time using basic raycast
-                        const remaining = dt - tEarly;
-                        if (remaining > EPSILON) {
-                            const p2 = {
-                                x: pL.x + vL.x * remaining,
-                                y: pL.y + vL.y * remaining
-                            };
-                            const stillInside = isPointInPolygonLocal(pL.x, pL.y, edges);
-                            const endInside = isPointInPolygonLocal(p2.x, p2.y, edges);
-
-                            if (stillInside && endInside) {
-                                // Just move
-                                pL.x = p2.x;
-                                pL.y = p2.y;
-                            } else if (stillInside && !endInside) {
-                                // Another crossing - shouldn't happen often with early bounce
-                                const secondCross = findBoundaryCrossing({ x: pL.x, y: pL.y }, p2, edges);
-                                if (secondCross.hit) {
-                                    pL.x = secondCross.hitPoint.x;
-                                    pL.y = secondCross.hitPoint.y;
-                                    const vrn2 = vL.x * secondCross.n.x + vL.y * secondCross.n.y;
-                                    if (vrn2 > 0) {
-                                        const j2 = (1 + eRest) * vrn2;
-                                        vL.x -= j2 * secondCross.n.x;
-                                        vL.y -= j2 * secondCross.n.y;
-                                    }
-                                    pL.x -= secondCross.n.x * NUDGE_DISTANCE;
-                                    pL.y -= secondCross.n.y * NUDGE_DISTANCE;
-                                }
-                            }
-                        }
-
-                        const pW = localToWorldPoint(pL.x, pL.y);
-                        const vW = localToWorldVec(vL.x, vL.y);
-                        ball.x = pW.x;
-                        ball.y = pW.y;
-                        ball.vx = vW.x;
-                        ball.vy = vW.y;
-                        return;
-                    }
-                }
+              remaining *= 1 - crossing.t;
+            } else {
+              // Couldn't find crossing, just move
+              pL.x = p2.x;
+              pL.y = p2.y;
+              remaining = 0;
             }
+          } else if (!inside1) {
+            // We're outside - push back inside and continue moving
+            const closest = findClosestBoundaryPoint(p1, edges);
+            if (closest) {
+              // Reflect velocity if moving outward
+              const vrn = vL.x * closest.normal.x + vL.y * closest.normal.y;
+              if (vrn > 0) {
+                const j = (1 + eRest) * vrn;
+                vL.x -= j * closest.normal.x;
+                vL.y -= j * closest.normal.y;
+              }
 
-            // No early bounce needed, use basic raycast
-            integrateRaycastLocalBasic(ball, vertsWorld, dt);
-        }
+              // Place well inside the polygon (not on boundary)
+              pL.x = closest.point.x - closest.normal.x * (NUDGE_DISTANCE * 10);
+              pL.y = closest.point.y - closest.normal.y * (NUDGE_DISTANCE * 10);
 
-        // Naive overlap comparator (original version with ball radius)
-        function naiveEdgeCheck(ball, verts) {
-            for (let i = 0; i < verts.length; i++) {
-                const p1 = verts[i],
-                    p2 = verts[(i + 1) % verts.length];
-                const sx = p2.x - p1.x,
-                    sy = p2.y - p1.y,
-                    sl = Math.hypot(sx, sy);
-                const vx = ball.x - p1.x,
-                    vy = ball.y - p1.y,
-                    proj = (vx * sx + vy * sy) / sl;
-                let cx, cy;
-                if (proj <= 0) {
-                    cx = p1.x;
-                    cy = p1.y;
-                } else if (proj >= sl) {
-                    cx = p2.x;
-                    cy = p2.y;
-                } else {
-                    cx = p1.x + (proj * sx) / sl;
-                    cy = p1.y + (proj * sy) / sl;
-                }
-                const dx = ball.x - cx,
-                    dy = ball.y - cy,
-                    dist = Math.hypot(dx, dy);
-                if (dist < ball.radius) {
-                    const nx = dx / dist,
-                        ny = dy / dist,
-                        overlap = ball.radius - dist;
-                    ball.x += nx * overlap;
-                    ball.y += ny * overlap;
-                    const vn = ball.vx * nx + ball.vy * ny;
-                    if (vn < 0) {
-                        const j = (-1 - eRest) * vn;
-                        ball.vx += j * nx;
-                        ball.vy += j * ny;
-                    }
-                }
+              // Now move for the remaining time from this corrected position
+              const newP2 = {
+                x: pL.x + vL.x * remaining,
+                y: pL.y + vL.y * remaining,
+              };
+
+              // Check if we can move to newP2 without leaving
+              const newInside = isPointInPolygonLocal(newP2.x, newP2.y, edges);
+              if (newInside) {
+                // Safe to move
+                pL.x = newP2.x;
+                pL.y = newP2.y;
+              }
+              // else stay at corrected position
             }
+            remaining = 0;
+          } else {
+            // We're staying inside, just move
+            pL.x = p2.x;
+            pL.y = p2.y;
+            remaining = 0;
+          }
         }
 
-        // Ray vis
-        function raycastVisual(point, verts) {
-            let inside = false,
-                x = point.x,
-                y = point.y,
-                xs = [];
-            for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) {
-                const xi = verts[i].x,
-                    yi = verts[i].y,
-                    xj = verts[j].x,
-                    yj = verts[j].y;
-                const hit =
-                    yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-                if (hit) {
-                    inside = !inside;
-                    const ix = ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-                    xs.push({ x: ix, y });
+        const pW = localToWorldPoint(pL.x, pL.y);
+        const vW = localToWorldVec(vL.x, vL.y);
+        ball.x = pW.x;
+        ball.y = pW.y;
+        ball.vx = vW.x;
+        ball.vy = vW.y;
+      }
+
+      // Raycast: checks if the next position would be outside the shape (predictive)
+      // If a collision would occur in (dt, 2dt], we execute that first bounce at tEarly = tau - dt now.
+      // Treats ball as a point (radius = 0)
+      function integrateRaycastLocal(ball, vertsWorld, dt) {
+        const { edges } = buildEdgesLocal(vertsWorld);
+        let pL = worldToLocalPoint(ball.x, ball.y);
+        let vL = worldToLocalVec(ball.vx, ball.vy);
+
+        // Look ahead 2*dt to see if we'd cross boundary
+        const p1 = { x: pL.x, y: pL.y };
+        const p2Ahead = {
+          x: pL.x + vL.x * (2 * dt),
+          y: pL.y + vL.y * (2 * dt),
+        };
+
+        const inside1 = isPointInPolygonLocal(p1.x, p1.y, edges);
+        const inside2Ahead = isPointInPolygonLocal(p2Ahead.x, p2Ahead.y, edges);
+
+        // Check if we'd cross the boundary in the next 2 frames
+        if (inside1 && !inside2Ahead) {
+          const lookAhead = findBoundaryCrossing(p1, p2Ahead, edges);
+
+          if (lookAhead.hit) {
+            // Calculate absolute time to crossing
+            const tau = lookAhead.t * (2 * dt);
+
+            // If crossing happens in next frame (not this frame), execute early
+            if (tau > dt + EPSILON) {
+              // Execute the bounce one frame early
+              const tEarly = tau - dt;
+
+              // Advance to early contact time
+              pL.x += vL.x * tEarly;
+              pL.y += vL.y * tEarly;
+
+              // Reflect velocity
+              const vrn = vL.x * lookAhead.n.x + vL.y * lookAhead.n.y;
+              if (vrn > 0) {
+                const j = (1 + eRest) * vrn;
+                vL.x -= j * lookAhead.n.x;
+                vL.y -= j * lookAhead.n.y;
+              }
+
+              // Nudge back inside
+              pL.x -= lookAhead.n.x * NUDGE_DISTANCE;
+              pL.y -= lookAhead.n.y * NUDGE_DISTANCE;
+
+              // Continue with remaining time using basic raycast
+              const remaining = dt - tEarly;
+              if (remaining > EPSILON) {
+                const p2 = {
+                  x: pL.x + vL.x * remaining,
+                  y: pL.y + vL.y * remaining,
+                };
+                const stillInside = isPointInPolygonLocal(pL.x, pL.y, edges);
+                const endInside = isPointInPolygonLocal(p2.x, p2.y, edges);
+
+                if (stillInside && endInside) {
+                  // Just move
+                  pL.x = p2.x;
+                  pL.y = p2.y;
+                } else if (stillInside && !endInside) {
+                  // Another crossing - shouldn't happen often with early bounce
+                  const secondCross = findBoundaryCrossing(
+                    { x: pL.x, y: pL.y },
+                    p2,
+                    edges
+                  );
+                  if (secondCross.hit) {
+                    pL.x = secondCross.hitPoint.x;
+                    pL.y = secondCross.hitPoint.y;
+                    const vrn2 =
+                      vL.x * secondCross.n.x + vL.y * secondCross.n.y;
+                    if (vrn2 > 0) {
+                      const j2 = (1 + eRest) * vrn2;
+                      vL.x -= j2 * secondCross.n.x;
+                      vL.y -= j2 * secondCross.n.y;
+                    }
+                    pL.x -= secondCross.n.x * NUDGE_DISTANCE;
+                    pL.y -= secondCross.n.y * NUDGE_DISTANCE;
+                  }
                 }
+              }
+
+              const pW = localToWorldPoint(pL.x, pL.y);
+              const vW = localToWorldVec(vL.x, vL.y);
+              ball.x = pW.x;
+              ball.y = pW.y;
+              ball.vx = vW.x;
+              ball.vy = vW.y;
+              return;
             }
-            return { inside, xs };
+          }
         }
 
-        function drawRays(b, verts) {
-            const res = raycastVisual({ x: b.x, y: b.y }, verts);
-            ctx.beginPath();
-            ctx.moveTo(b.x, b.y);
-            ctx.lineTo(W, b.y);
-            ctx.strokeStyle = res.inside
-                ? RAYCAST_INSIDE_COLOR
-                : RAYCAST_OUTSIDE_COLOR;
-            ctx.lineWidth = RAYCAST_LINE_WIDTH;
-            ctx.stroke();
+        // No early bounce needed, use basic raycast
+        integrateRaycastLocalBasic(ball, vertsWorld, dt);
+      }
 
-            for (const p of res.xs) {
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, RAYCAST_DOT_RADIUS, 0, Math.PI * 2);
-                ctx.fillStyle = res.inside
-                    ? RAYCAST_DOT_INSIDE_COLOR
-                    : RAYCAST_DOT_OUTSIDE_COLOR;
-                ctx.fill();
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = RAYCAST_DOT_BORDER_WIDTH;
-                ctx.stroke();
+      // Naive overlap comparator (original version with ball radius)
+      function naiveEdgeCheck(ball, verts) {
+        for (let i = 0; i < verts.length; i++) {
+          const p1 = verts[i],
+            p2 = verts[(i + 1) % verts.length];
+          const sx = p2.x - p1.x,
+            sy = p2.y - p1.y,
+            sl = Math.hypot(sx, sy);
+          const vx = ball.x - p1.x,
+            vy = ball.y - p1.y,
+            proj = (vx * sx + vy * sy) / sl;
+          let cx, cy;
+          if (proj <= 0) {
+            cx = p1.x;
+            cy = p1.y;
+          } else if (proj >= sl) {
+            cx = p2.x;
+            cy = p2.y;
+          } else {
+            cx = p1.x + (proj * sx) / sl;
+            cy = p1.y + (proj * sy) / sl;
+          }
+          const dx = ball.x - cx,
+            dy = ball.y - cy,
+            dist = Math.hypot(dx, dy);
+          if (dist < ball.radius) {
+            const nx = dx / dist,
+              ny = dy / dist,
+              overlap = ball.radius - dist;
+            ball.x += nx * overlap;
+            ball.y += ny * overlap;
+            const vn = ball.vx * nx + ball.vy * ny;
+            if (vn < 0) {
+              const j = (-1 - eRest) * vn;
+              ball.vx += j * nx;
+              ball.vy += j * ny;
             }
+          }
+        }
+      }
 
-            ctx.fillStyle = res.inside
-                ? RAYCAST_TEXT_INSIDE_COLOR
-                : RAYCAST_TEXT_OUTSIDE_COLOR;
-            ctx.font = `${RAYCAST_TEXT_SIZE}px "Courier New",Courier,monospace`;
-            ctx.fillText(`${res.xs.length}`, b.x + 22, b.y - 8);
+      // Ray vis
+      function raycastVisual(point, verts) {
+        let inside = false,
+          x = point.x,
+          y = point.y,
+          xs = [];
+        for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) {
+          const xi = verts[i].x,
+            yi = verts[i].y,
+            xj = verts[j].x,
+            yj = verts[j].y;
+          const hit =
+            yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+          if (hit) {
+            inside = !inside;
+            const ix = ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+            xs.push({ x: ix, y });
+          }
+        }
+        return { inside, xs };
+      }
+
+      function drawRays(b, verts) {
+        const res = raycastVisual({ x: b.x, y: b.y }, verts);
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y);
+        ctx.lineTo(W, b.y);
+        ctx.strokeStyle = res.inside
+          ? RAYCAST_INSIDE_COLOR
+          : RAYCAST_OUTSIDE_COLOR;
+        ctx.lineWidth = RAYCAST_LINE_WIDTH;
+        ctx.stroke();
+
+        for (const p of res.xs) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, RAYCAST_DOT_RADIUS, 0, Math.PI * 2);
+          ctx.fillStyle = res.inside
+            ? RAYCAST_DOT_INSIDE_COLOR
+            : RAYCAST_DOT_OUTSIDE_COLOR;
+          ctx.fill();
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = RAYCAST_DOT_BORDER_WIDTH;
+          ctx.stroke();
         }
 
-        // Animation
-        let last = null;
-        function animate() {
-            ctx.clearRect(0, 0, W, H);
-            const now = performance.now();
-            const dt = Math.min((now - (last || now)) / 16.667, 2); // vs 60Hz
-            last = now;
+        ctx.fillStyle = res.inside
+          ? RAYCAST_TEXT_INSIDE_COLOR
+          : RAYCAST_TEXT_OUTSIDE_COLOR;
+        ctx.font = `${RAYCAST_TEXT_SIZE}px "Courier New",Courier,monospace`;
+        ctx.fillText(`${res.xs.length}`, b.x + 22, b.y - 8);
+      }
 
-            // For RAYCAST: get OLD shape position first
-            const vertsWorldOld = mode === 'raycast' ? getVerticesWorld() : null;
+      // Animation
+      let last = null;
+      function animate() {
+        ctx.clearRect(0, 0, W, H);
+        const now = performance.now();
+        const dt = Math.min((now - (last || now)) / 16.667, 2); // vs 60Hz
+        last = now;
 
-            // Update rotation to get new shape position
-            theta += omega * dt;
-            const vertsWorld = getVerticesWorld();
+        // For RAYCAST: get OLD shape position first
+        const vertsWorldOld = mode === 'raycast' ? getVerticesWorld() : null;
 
-            drawPolygon(vertsWorld);
+        // Update rotation to get new shape position
+        theta += omega * dt;
+        const vertsWorld = getVerticesWorld();
 
-            for (const b of balls) {
-                // Forces
-                b.vy += gravity * dt;
+        drawPolygon(vertsWorld);
 
-                if (mode === 'naive') {
-                    b.x += b.vx * dt;
-                    b.y += b.vy * dt;
-                    naiveEdgeCheck(b, vertsWorld);
-                } else if (mode === 'raycast') {
-                    // Step 1: Check collision with OLD shape (before rotation)
-                    integrateRaycastLocal(b, vertsWorldOld, dt);
+        for (const b of balls) {
+          // Forces
+          b.vy += gravity * dt;
 
-                    // Step 2: Check if ball is outside NEW shape (after rotation)
-                    // If so, fix position and velocity - this takes precedence
-                    fixBallIfOutside(b, vertsWorld);
-                }
+          if (mode === 'naive') {
+            b.x += b.vx * dt;
+            b.y += b.vy * dt;
+            naiveEdgeCheck(b, vertsWorld);
+          } else if (mode === 'raycast') {
+            // Step 1: Check collision with OLD shape (before rotation)
+            integrateRaycastLocal(b, vertsWorldOld, dt);
 
-                // Canvas bounds fallback
-                if (mode === 'naive') {
-                    // NAIVE mode: use ball radius
-                    if (b.x < b.radius) {
-                        b.x = b.radius;
-                        b.vx = Math.abs(b.vx) * eRest;
-                    } else if (b.x > W - b.radius) {
-                        b.x = W - b.radius;
-                        b.vx = -Math.abs(b.vx) * eRest;
-                    }
-                    if (b.y < b.radius) {
-                        b.y = b.radius;
-                        b.vy = Math.abs(b.vy) * eRest;
-                    } else if (b.y > H - b.radius) {
-                        b.y = H - b.radius;
-                        b.vy = -Math.abs(b.vy) * eRest;
-                    }
-                } else {
-                    // RAYCAST mode: point-based (no radius)
-                    if (b.x < 0) {
-                        b.x = 0;
-                        b.vx = Math.abs(b.vx) * eRest;
-                    } else if (b.x > W) {
-                        b.x = W;
-                        b.vx = -Math.abs(b.vx) * eRest;
-                    }
-                    if (b.y < 0) {
-                        b.y = 0;
-                        b.vy = Math.abs(b.vy) * eRest;
-                    } else if (b.y > H) {
-                        b.y = H;
-                        b.vy = -Math.abs(b.vy) * eRest;
-                    }
-                }
+            // Step 2: Check if ball is outside NEW shape (after rotation)
+            // If so, fix position and velocity - this takes precedence
+            fixBallIfOutside(b, vertsWorld);
+          }
+
+          // Canvas bounds fallback
+          if (mode === 'naive') {
+            // NAIVE mode: use ball radius
+            if (b.x < b.radius) {
+              b.x = b.radius;
+              b.vx = Math.abs(b.vx) * eRest;
+            } else if (b.x > W - b.radius) {
+              b.x = W - b.radius;
+              b.vx = -Math.abs(b.vx) * eRest;
             }
-
-            for (const b of balls) drawBall(b);
-            if (mode === 'raycast')
-                for (const b of balls) drawRays(b, vertsWorld);
-
-            requestAnimationFrame(animate);
+            if (b.y < b.radius) {
+              b.y = b.radius;
+              b.vy = Math.abs(b.vy) * eRest;
+            } else if (b.y > H - b.radius) {
+              b.y = H - b.radius;
+              b.vy = -Math.abs(b.vy) * eRest;
+            }
+          } else {
+            // RAYCAST mode: point-based (no radius)
+            if (b.x < 0) {
+              b.x = 0;
+              b.vx = Math.abs(b.vx) * eRest;
+            } else if (b.x > W) {
+              b.x = W;
+              b.vx = -Math.abs(b.vx) * eRest;
+            }
+            if (b.y < 0) {
+              b.y = 0;
+              b.vy = Math.abs(b.vy) * eRest;
+            } else if (b.y > H) {
+              b.y = H;
+              b.vy = -Math.abs(b.vy) * eRest;
+            }
+          }
         }
-        animate();
+
+        for (const b of balls) drawBall(b);
+        if (mode === 'raycast') for (const b of balls) drawRays(b, vertsWorld);
+
+        requestAnimationFrame(animate);
+      }
+      animate();
     </script>
-</body>
+  </body>
 </html>

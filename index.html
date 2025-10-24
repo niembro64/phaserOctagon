@@ -303,9 +303,9 @@
         const ROTATION_DEFAULT = 0.01;
 
         const BOUNCE_MIN = 0.1;
-        const BOUNCE_MAX = 0.99;
+        const BOUNCE_MAX = 1;
         const BOUNCE_STEP = 0.01;
-        const BOUNCE_DEFAULT = 0.92;
+        const BOUNCE_DEFAULT = 0.98;
 
         const MAX_COLLISION_ITERATIONS = 3;
         const MAX_COLLISION_ITERATIONS_PREDICT = 2;
@@ -585,6 +585,7 @@
         }
 
         // Continuous integrator (raycast) - basic version used as fallback
+        // Treats ball as a point (radius = 0)
         function integrateRaycastLocalBasic(ball, vertsWorld, dt) {
             const { edges } = buildEdgesLocal(vertsWorld);
             let pL = worldToLocalPoint(ball.x, ball.y);
@@ -596,7 +597,7 @@
                 i++
             ) {
                 const vStep = { x: vL.x * remaining, y: vL.y * remaining };
-                const toi = sweptTOI_Local(pL, vStep, ball.radius, edges);
+                const toi = sweptTOI_Local(pL, vStep, 0, edges);
                 if (!toi.hit) {
                     pL.x += vL.x * remaining;
                     pL.y += vL.y * remaining;
@@ -619,13 +620,12 @@
                 pL.x += vL.x * remaining;
                 pL.y += vL.y * remaining;
             }
-            // drift correction
+            // drift correction (point-based)
             const { edges: edges2 } = buildEdgesLocal(vertsWorld);
             let worstD = 0,
                 worstN = null;
             for (const ed of edges2) {
-                const d =
-                    (pL.x - ed.a.x) * ed.n.x + (pL.y - ed.a.y) * ed.n.y - ball.radius;
+                const d = (pL.x - ed.a.x) * ed.n.x + (pL.y - ed.a.y) * ed.n.y;
                 if (d < worstD) {
                     worstD = d;
                     worstN = ed.n;
@@ -651,15 +651,15 @@
 
         // Raycast: checks if the next position would be outside the shape (predictive)
         // If a collision would occur in (dt, 2dt], we execute that first bounce at tEarly = tau - dt now.
+        // Treats ball as a point (radius = 0)
         function integrateRaycastLocal(ball, vertsWorld, dt) {
             const { edges } = buildEdgesLocal(vertsWorld);
             let pL = worldToLocalPoint(ball.x, ball.y);
             let vL = worldToLocalVec(ball.vx, ball.vy);
-            const R = ball.radius;
 
-            // Look ahead 2*dt for the first hit (edges + vertices)
+            // Look ahead 2*dt for the first hit (edges only, point-based)
             const vH = { x: vL.x * (2 * dt), y: vL.y * (2 * dt) };
-            const look = sweptTOI_Local(pL, vH, R, edges);
+            const look = sweptTOI_Local(pL, vH, 0, edges);
 
             // If no hit in next 2 frames, just do normal raycast for this frame.
             if (!look.hit) {
@@ -705,7 +705,7 @@
                 i++
             ) {
                 const vStep = { x: vL.x * remaining, y: vL.y * remaining };
-                const toi = sweptTOI_Local(pL, vStep, R, edges);
+                const toi = sweptTOI_Local(pL, vStep, 0, edges);
                 if (!toi.hit) {
                     pL.x += vL.x * remaining;
                     pL.y += vL.y * remaining;
@@ -737,7 +737,7 @@
             ball.vy = vW.y;
         }
 
-        // Naive overlap comparator
+        // Naive overlap comparator (original version with ball radius)
         function naiveEdgeCheck(ball, verts) {
             for (let i = 0; i < verts.length; i++) {
                 const p1 = verts[i],
@@ -869,37 +869,6 @@
                 } else if (b.y > H - b.radius) {
                     b.y = H - b.radius;
                     b.vy = -Math.abs(b.vy) * eRest;
-                }
-            }
-
-            // Ball-ball
-            for (let i = 0; i < balls.length; i++) {
-                for (let j = i + 1; j < balls.length; j++) {
-                    const a = balls[i],
-                        b = balls[j];
-                    const dx = b.x - a.x,
-                        dy = b.y - a.y,
-                        dist = Math.hypot(dx, dy),
-                        min = a.radius + b.radius;
-                    if (dist < min) {
-                        const nx = dx / dist,
-                            ny = dy / dist,
-                            overlap = min - dist;
-                        a.x -= nx * overlap * 0.5;
-                        a.y -= ny * overlap * 0.5;
-                        b.x += nx * overlap * 0.5;
-                        b.y += ny * overlap * 0.5;
-                        const dvx = b.vx - a.vx,
-                            dvy = b.vy - a.vy,
-                            dvn = dvx * nx + dvy * ny;
-                        if (dvn < 0) {
-                            const j = dvn * eRest;
-                            a.vx += j * nx;
-                            a.vy += j * ny;
-                            b.vx -= j * nx;
-                            b.vy -= j * ny;
-                        }
-                    }
                 }
             }
 

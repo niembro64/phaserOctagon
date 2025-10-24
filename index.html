@@ -668,6 +668,42 @@
             return null;
         }
 
+        // Check if ball is outside polygon and fix it (for post-rotation correction)
+        function fixBallIfOutside(ball, vertsWorld) {
+            const { edges } = buildEdgesLocal(vertsWorld);
+            const pL = worldToLocalPoint(ball.x, ball.y);
+            let vL = worldToLocalVec(ball.vx, ball.vy);
+
+            const inside = isPointInPolygonLocal(pL.x, pL.y, edges);
+
+            if (!inside) {
+                // Ball is outside - push back inside and bounce
+                const closest = findClosestBoundaryPoint(pL, edges);
+                if (closest) {
+                    // Reflect velocity if moving outward
+                    const vrn = vL.x * closest.normal.x + vL.y * closest.normal.y;
+                    if (vrn > 0) {
+                        const j = (1 + eRest) * vrn;
+                        vL.x -= j * closest.normal.x;
+                        vL.y -= j * closest.normal.y;
+                    }
+
+                    // Place well inside the polygon
+                    const pLNew = {
+                        x: closest.point.x - closest.normal.x * (NUDGE_DISTANCE * 10),
+                        y: closest.point.y - closest.normal.y * (NUDGE_DISTANCE * 10)
+                    };
+
+                    const pW = localToWorldPoint(pLNew.x, pLNew.y);
+                    const vW = localToWorldVec(vL.x, vL.y);
+                    ball.x = pW.x;
+                    ball.y = pW.y;
+                    ball.vx = vW.x;
+                    ball.vy = vW.y;
+                }
+            }
+        }
+
         // Continuous integrator (raycast) - basic version used as fallback
         // Treats ball as a point (radius = 0)
         // Uses proper point-in-polygon testing to respect polygon boundaries
@@ -962,6 +998,10 @@
             const dt = Math.min((now - (last || now)) / 16.667, 2); // vs 60Hz
             last = now;
 
+            // For RAYCAST: get OLD shape position first
+            const vertsWorldOld = mode === 'raycast' ? getVerticesWorld() : null;
+
+            // Update rotation to get new shape position
             theta += omega * dt;
             const vertsWorld = getVerticesWorld();
 
@@ -976,7 +1016,12 @@
                     b.y += b.vy * dt;
                     naiveEdgeCheck(b, vertsWorld);
                 } else if (mode === 'raycast') {
-                    integrateRaycastLocal(b, vertsWorld, dt);
+                    // Step 1: Check collision with OLD shape (before rotation)
+                    integrateRaycastLocal(b, vertsWorldOld, dt);
+
+                    // Step 2: Check if ball is outside NEW shape (after rotation)
+                    // If so, fix position and velocity - this takes precedence
+                    fixBallIfOutside(b, vertsWorld);
                 }
 
                 // Canvas bounds fallback
